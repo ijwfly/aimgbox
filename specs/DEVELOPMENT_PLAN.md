@@ -154,15 +154,9 @@ tests/
 
 **Результат:** `curl POST /v1/files` → `curl POST /v1/jobs` → poll → `succeeded` → download presigned URL
 
-> **Завершён:** ~35 новых файлов, ~6 изменённых. 26 unit тестов + functional + e2e. Включает:
-> - Alembic миграция с 11 таблицами
-> - 10 repository классов (BaseRepo + repos)
-> - JWT auth (pyjwt) + get_current_integration/user dependencies
-> - Billing service (reserve/refund credits)
-> - Mock provider + @job_handler framework + remove_bg handler
-> - POST/GET /v1/files + POST/GET /v1/jobs API routes
-> - Worker with BRPOP processing loop
-> - Seed + sync-job-types CLI commands
+> **Завершён:** commit `e10b07f`. 49 файлов, 3003 строк. 51 тест проходит (26 unit + 22 functional + 3 e2e).
+> Alembic миграция (11 таблиц), 10 repository классов (BaseRepo), JWT auth (pyjwt), billing (reserve/refund), mock provider, @job_handler framework, remove_bg handler, POST/GET /v1/files, POST/GET /v1/jobs, worker BRPOP loop, seed + sync-job-types CLI.
+> **Dev-заметка:** asyncpg требует регистрации JSON/JSONB кодеков через `set_type_codec` в `_init_connection`. `from __future__ import annotations` ломает `fn.__annotations__` — использовать `typing.get_type_hints(fn)`.
 
 ---
 
