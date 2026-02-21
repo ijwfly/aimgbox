@@ -17,5 +17,15 @@ def test_handler_info():
     assert info.output_model is not None
 
 
+def test_txt2img_discovered():
+    discover_handlers()
+    assert "txt2img" in JobRegistry.all()
+    info = JobRegistry.get("txt2img")
+    assert info is not None
+    assert info.name == "Text to Image"
+    assert info.input_model is not None
+    assert info.output_model is not None
+
+
 def test_get_nonexistent():
     assert JobRegistry.get("nonexistent_handler_xyz") is None

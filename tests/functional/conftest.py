@@ -118,10 +118,43 @@ async def seeded_data(db_pool, settings):
         slug="remove_bg",
         name="Remove Background",
         description="Removes background from an image using AI",
-        input_schema={},
-        output_schema={},
+        input_schema={
+            "type": "object",
+            "required": ["image"],
+            "properties": {
+                "image": {"type": "string", "format": "uuid"},
+                "output_format": {"type": "string", "enum": ["png", "webp"], "default": "png"},
+            },
+        },
+        output_schema={
+            "type": "object",
+            "properties": {"image": {"type": "string", "format": "uuid"}},
+        },
     )
     await jt_repo.add_provider(job_type.id, provider.id, priority=0)
+
+    txt2img_type = await jt_repo.upsert(
+        slug="txt2img",
+        name="Text to Image",
+        description="Generates an image from a text prompt using AI",
+        input_schema={
+            "type": "object",
+            "required": ["prompt"],
+            "properties": {
+                "prompt": {"type": "string"},
+                "width": {"type": "integer", "default": 1024},
+                "height": {"type": "integer", "default": 1024},
+                "output_format": {
+                    "type": "string", "enum": ["png", "webp", "jpg"], "default": "png",
+                },
+            },
+        },
+        output_schema={
+            "type": "object",
+            "properties": {"image": {"type": "string", "format": "uuid"}},
+        },
+    )
+    await jt_repo.add_provider(txt2img_type.id, provider.id, priority=0)
 
     return {
         "partner": partner,
@@ -130,4 +163,5 @@ async def seeded_data(db_pool, settings):
         "token": token,
         "provider": provider,
         "job_type": job_type,
+        "txt2img_type": txt2img_type,
     }

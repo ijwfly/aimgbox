@@ -6,6 +6,7 @@ from uuid import UUID
 import structlog
 
 from aimg.common.connections import create_db_pool, create_redis_client, create_s3_client
+from aimg.common.encryption import decrypt_value
 from aimg.common.logging import configure_logging
 from aimg.common.settings import Settings
 from aimg.db.repos.files import FileRepo
@@ -17,7 +18,9 @@ from aimg.jobs.context import JobContext
 from aimg.jobs.fields import InputFile, OutputFile
 from aimg.jobs.registry import JobRegistry, discover_handlers
 from aimg.providers.base import AllProvidersFailedError, ProviderAdapter
+from aimg.providers.failing_mock import FailingMockProvider
 from aimg.providers.mock import MockProvider
+from aimg.providers.replicate import ReplicateAdapter
 from aimg.services.billing import refund_credits
 
 logger = structlog.get_logger()
@@ -26,6 +29,8 @@ QUEUE_KEY = "aimg:jobs:queue"
 
 PROVIDER_ADAPTERS: dict[str, type[ProviderAdapter]] = {
     "aimg.providers.mock.MockProvider": MockProvider,
+    "aimg.providers.replicate.ReplicateAdapter": ReplicateAdapter,
+    "aimg.providers.failing_mock.FailingMockProvider": FailingMockProvider,
 }
 
 
@@ -84,6 +89,16 @@ async def process_job(
             log.warning("unknown_adapter_class", adapter_class=prov.adapter_class)
             continue
         merged_config = {**prov.config, **jtp.config_override}
+        if prov.api_key_encrypted and prov.api_key_encrypted != "not-needed":
+            try:
+                merged_config["api_key"] = decrypt_value(
+                    prov.api_key_encrypted, settings.encryption_key
+                )
+            except Exception:
+                log.warning(
+                    "provider_key_decrypt_failed", provider_id=str(prov.id)
+                )
+                continue
         adapters.append(adapter_cls(provider_id=prov.id, config=merged_config))
         provider_ids.append(prov.id)
 

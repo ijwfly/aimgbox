@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from uuid import UUID
 
 import asyncpg
@@ -100,6 +101,51 @@ class JobRepo(BaseRepo):
                 conn=conn,
             )
         return Job(**dict(row)) if row else None
+
+    async def list_for_user(
+        self,
+        user_id: UUID,
+        integration_id: UUID,
+        *,
+        limit: int = 20,
+        cursor_created_at: datetime | None = None,
+        cursor_id: UUID | None = None,
+        status_filter: str | None = None,
+        job_type_filter: str | None = None,
+        conn: asyncpg.Connection | None = None,
+    ) -> list[Job]:
+        conditions = ["j.user_id = $1", "j.integration_id = $2"]
+        args: list = [user_id, integration_id]
+        idx = 3
+
+        if cursor_created_at and cursor_id:
+            conditions.append(f"(j.created_at, j.id) < (${idx}, ${idx + 1})")
+            args.extend([cursor_created_at, cursor_id])
+            idx += 2
+
+        if status_filter:
+            conditions.append(f"j.status = ${idx}")
+            args.append(status_filter)
+            idx += 1
+
+        if job_type_filter:
+            conditions.append(f"jt.slug = ${idx}")
+            args.append(job_type_filter)
+            idx += 1
+
+        where = " AND ".join(conditions)
+        join = "JOIN job_types jt ON jt.id = j.job_type_id" if job_type_filter else ""
+
+        query = f"""
+            SELECT j.* FROM jobs j {join}
+            WHERE {where}
+            ORDER BY j.created_at DESC, j.id DESC
+            LIMIT ${idx}
+        """
+        args.append(limit)
+
+        rows = await self._fetch(query, *args, conn=conn)
+        return [Job(**dict(r)) for r in rows]
 
     async def increment_attempts(
         self,

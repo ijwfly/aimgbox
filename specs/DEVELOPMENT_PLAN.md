@@ -66,7 +66,7 @@ tests/
 |------|--------|---------------|-----------------|
 | 0 | **DONE** | `GET /health` | Сервис жив, подключения работают |
 | 1 | **DONE** | + files, jobs, auth | Полный цикл: upload → job → result |
-| 2 | TODO | + meta, balance, history | Два реальных job type, fallback, баланс |
+| 2 | **DONE** | + meta, balance, history | Два реальных job type, fallback, баланс |
 | 3 | TODO | + billing, webhooks, i18n | Все /v1/ эндпоинты, все защитные механизмы |
 | 4 | TODO | + /admin/ | Полное управление через браузер |
 | 5 | TODO | — | Acceptance criteria 100% |
@@ -198,6 +198,15 @@ tests/
 - **E2E:** create remove_bg job (mock provider) → succeeded; create txt2img job → succeeded; fallback: первый провайдер fails → второй succeeds; /meta/job-types возвращает оба типа
 
 **Результат:** два работающих типа джобов, fallback, баланс и история через API
+
+> **Завершён:** 10 новых файлов, 9 изменённых. 42 unit теста проходят (было 33, +9 новых). Ruff lint чистый.
+> **Новые модули:** `aimg/common/encryption.py` (Fernet), `aimg/common/pagination.py` (cursor), `aimg/providers/replicate.py` (ReplicateAdapter — HTTP polling), `aimg/providers/failing_mock.py` (для тестов fallback), `aimg/jobs/handlers/txt2img.py` (Txt2ImgInput/Output + handler).
+> **Новые API:** `GET /v1/meta/job-types` (aimg/api/routes/meta.py), `GET /v1/users/me/balance`, `GET /v1/users/me/history` с cursor-пагинацией (aimg/api/routes/users.py).
+> **Worker:** зарегистрированы ReplicateAdapter + FailingMockProvider, дешифровка `api_key_encrypted` через Fernet.
+> **Repos:** `JobTypeRepo.list_active()`, `JobRepo.list_for_user()` с cursor + status/job_type фильтрами.
+> **Seed:** Replicate provider + txt2img job type + fallback-цепочки (replicate priority=0, mock priority=1) для обоих типов.
+> **Тесты:** unit (encryption 4, pagination 6, replicate 5, registry +1), functional (test_meta 3, test_users 5, test_fallback 1), e2e (+4: meta, balance, history, txt2img flow).
+> **Dev-заметка:** `cryptography>=43.0.0` добавлена в зависимости. Replicate адаптер использует httpx polling с интервалом 2s / макс 120 попыток.
 
 ---
 

@@ -9,6 +9,8 @@ from aimg.api.middleware import RequestIdMiddleware
 from aimg.api.routes.files import router as files_router
 from aimg.api.routes.health import router as health_router
 from aimg.api.routes.jobs import router as jobs_router
+from aimg.api.routes.meta import router as meta_router
+from aimg.api.routes.users import router as users_router
 from aimg.common.connections import create_db_pool, create_redis_client, create_s3_client
 from aimg.common.logging import configure_logging
 from aimg.common.settings import Settings
@@ -68,5 +70,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health_router)
     app.include_router(files_router)
     app.include_router(jobs_router)
+    app.include_router(meta_router)
+    app.include_router(users_router)
 
     return app

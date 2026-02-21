@@ -51,6 +51,15 @@ class JobTypeRepo(BaseRepo):
         )
         return JobType(**dict(row))
 
+    async def list_active(
+        self, *, conn: asyncpg.Connection | None = None
+    ) -> list[JobType]:
+        rows = await self._fetch(
+            "SELECT * FROM job_types WHERE status = 'active' ORDER BY slug",
+            conn=conn,
+        )
+        return [JobType(**dict(r)) for r in rows]
+
     async def get_providers_for_job_type(
         self, job_type_id: UUID, *, conn: asyncpg.Connection | None = None
     ) -> list[JobTypeProvider]:
