@@ -64,8 +64,8 @@ tests/
 
 | Этап | Статус | Работающие API | Можно проверить |
 |------|--------|---------------|-----------------|
-| 0 | TODO | `GET /health` | Сервис жив, подключения работают |
-| 1 | TODO | + files, jobs, auth | Полный цикл: upload → job → result |
+| 0 | **DONE** | `GET /health` | Сервис жив, подключения работают |
+| 1 | **DONE** | + files, jobs, auth | Полный цикл: upload → job → result |
 | 2 | TODO | + meta, balance, history | Два реальных job type, fallback, баланс |
 | 3 | TODO | + billing, webhooks, i18n | Все /v1/ эндпоинты, все защитные механизмы |
 | 4 | TODO | + /admin/ | Полное управление через браузер |
@@ -95,6 +95,9 @@ tests/
 - **E2E:** `GET /health` → 200
 
 **Результат:** `docker-compose up` → `curl /health` → `{"status": "ok"}`
+
+> **Завершён:** commit `bf8b456`. 46 файлов, 2753 строк. Все 5 тестов проходят (3 unit + 1 functional + 1 e2e).
+> **Dev-заметка:** порты в docker-compose перемаплены из-за локальных конфликтов: postgres `5433:5432`, api `8010:8000`.
 
 ---
 
@@ -150,6 +153,16 @@ tests/
 - **E2E:** полный flow: auth → upload файла → create job → poll до succeeded → download result. Также: create job без кредитов → 402
 
 **Результат:** `curl POST /v1/files` → `curl POST /v1/jobs` → poll → `succeeded` → download presigned URL
+
+> **Завершён:** ~35 новых файлов, ~6 изменённых. 26 unit тестов + functional + e2e. Включает:
+> - Alembic миграция с 11 таблицами
+> - 10 repository классов (BaseRepo + repos)
+> - JWT auth (pyjwt) + get_current_integration/user dependencies
+> - Billing service (reserve/refund credits)
+> - Mock provider + @job_handler framework + remove_bg handler
+> - POST/GET /v1/files + POST/GET /v1/jobs API routes
+> - Worker with BRPOP processing loop
+> - Seed + sync-job-types CLI commands
 
 ---
 

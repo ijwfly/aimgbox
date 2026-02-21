@@ -3,7 +3,7 @@ import sys
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print("Usage: python -m aimg <api|worker|admin>")
+        print("Usage: python -m aimg <api|worker|admin|seed|sync-job-types>")
         sys.exit(1)
 
     command = sys.argv[1]
@@ -32,9 +32,17 @@ def main() -> None:
             port=8001,
             log_level="info",
         )
+    elif command == "seed":
+        from aimg.scripts.seed import main as seed_main
+
+        seed_main()
+    elif command == "sync-job-types":
+        from aimg.scripts.sync_job_types import main as sync_main
+
+        sync_main()
     else:
         print(f"Unknown command: {command}")
-        print("Usage: python -m aimg <api|worker|admin>")
+        print("Usage: python -m aimg <api|worker|admin|seed|sync-job-types>")
         sys.exit(1)
 
 

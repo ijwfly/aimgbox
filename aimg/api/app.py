@@ -4,8 +4,11 @@ from contextlib import asynccontextmanager
 import structlog
 from fastapi import FastAPI
 
+from aimg.api.errors import AppError, app_error_handler
 from aimg.api.middleware import RequestIdMiddleware
+from aimg.api.routes.files import router as files_router
 from aimg.api.routes.health import router as health_router
+from aimg.api.routes.jobs import router as jobs_router
 from aimg.common.connections import create_db_pool, create_redis_client, create_s3_client
 from aimg.common.logging import configure_logging
 from aimg.common.settings import Settings
@@ -61,6 +64,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="AIMG API", version="1.0.0", lifespan=lifespan)
     app.add_middleware(RequestIdMiddleware)
+    app.add_exception_handler(AppError, app_error_handler)
     app.include_router(health_router)
+    app.include_router(files_router)
+    app.include_router(jobs_router)
 
     return app

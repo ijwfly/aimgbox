@@ -1,3 +1,4 @@
+import json
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -8,8 +9,17 @@ from aiobotocore.session import AioSession
 from aimg.common.settings import Settings
 
 
+async def _init_connection(conn: asyncpg.Connection) -> None:
+    await conn.set_type_codec(
+        "jsonb", encoder=json.dumps, decoder=json.loads, schema="pg_catalog"
+    )
+    await conn.set_type_codec(
+        "json", encoder=json.dumps, decoder=json.loads, schema="pg_catalog"
+    )
+
+
 async def create_db_pool(settings: Settings) -> asyncpg.Pool:
-    return await asyncpg.create_pool(dsn=settings.database_url)
+    return await asyncpg.create_pool(dsn=settings.database_url, init=_init_connection)
 
 
 def create_redis_client(settings: Settings) -> aioredis.Redis:
