@@ -27,7 +27,7 @@ AIMG_DATABASE_URL="postgresql://aimg:aimg@localhost:5433/aimg" uv run alembic up
 The fastest path — seed creates everything at once:
 
 ```bash
-docker-compose exec api python -m aimg seed
+docker-compose exec api uv run python -m aimg seed
 ```
 
 Creates: partner, integration, API key (JWT), providers (mock + replicate), job types (remove_bg + txt2img), admin user `admin`/`admin`. **Prints the JWT token** — save it.
@@ -51,7 +51,7 @@ If you ran seed — everything is already set up, skip to step 5. From scratch:
 4. **Providers** — New — slug `mock`, adapter class `mock`, any api key
 5. **Job Types** — run sync to register handlers:
    ```bash
-   docker-compose exec api python -m aimg sync-job-types
+   docker-compose exec api uv run python -m aimg sync-job-types
    ```
    Then in admin open each job type and add the provider.
 
@@ -61,6 +61,7 @@ If you ran seed — everything is already set up, skip to step 5. From scratch:
 # txt2img — no file upload needed
 curl -X POST http://localhost:8010/v1/jobs \
   -H "X-API-Key: <JWT_TOKEN>" \
+  -H "X-External-User-Id: user-1" \
   -H "Content-Type: application/json" \
   -d '{"job_type": "txt2img", "input": {"prompt": "a cat in space"}}'
 ```
@@ -71,12 +72,14 @@ Or `remove_bg` (upload a file first):
 # Upload image
 curl -X POST http://localhost:8010/v1/files \
   -H "X-API-Key: <JWT_TOKEN>" \
+  -H "X-External-User-Id: user-1" \
   -F "file=@photo.png"
 # returns file_id
 
 # Create job
 curl -X POST http://localhost:8010/v1/jobs \
   -H "X-API-Key: <JWT_TOKEN>" \
+  -H "X-External-User-Id: user-1" \
   -H "Content-Type: application/json" \
   -d '{"job_type": "remove_bg", "input": {"image": "<FILE_ID>"}}'
 ```
@@ -84,7 +87,9 @@ curl -X POST http://localhost:8010/v1/jobs \
 ### 6. Check status
 
 ```bash
-curl http://localhost:8010/v1/jobs/<JOB_ID> -H "X-API-Key: <JWT_TOKEN>"
+curl http://localhost:8010/v1/jobs/<JOB_ID> \
+  -H "X-API-Key: <JWT_TOKEN>" \
+  -H "X-External-User-Id: user-1"
 ```
 
 The worker picks up the job automatically. Mock provider returns results immediately.
