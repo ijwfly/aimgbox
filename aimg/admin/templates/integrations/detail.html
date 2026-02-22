@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Integration: {{ integration.name }} - AIMG Admin{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ul>
+        <li><a href="/admin/integrations">Integrations</a></li>
+        <li>{{ integration.name }}</li>
+    </ul>
+</nav>
+
+<h3>{{ integration.name }}</h3>
+
+<article>
+    <dl>
+        <dt>ID</dt><dd class="mono">{{ integration.id }}</dd>
+        <dt>Partner</dt><dd>{% if partner %}<a href="/admin/partners/{{ partner.id }}">{{ partner.name }}</a>{% else %}{{ integration.partner_id }}{% endif %}</dd>
+        <dt>Status</dt><dd><span class="badge badge-{{ integration.status }}">{{ integration.status }}</span></dd>
+        <dt>Rate Limit (RPM)</dt><dd>{{ integration.rate_limit_rpm }}</dd>
+        <dt>Default Free Credits</dt><dd>{{ integration.default_free_credits }}</dd>
+        <dt>Webhook URL</dt><dd class="mono">{{ integration.webhook_url or '—' }}</dd>
+        <dt>Created</dt><dd>{{ integration.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</dd>
+    </dl>
+
+    {% if admin_user.role in ('super_admin', 'admin') %}
+    <div class="actions">
+        {% if integration.status == 'active' %}
+        <form method="post" action="/admin/integrations/{{ integration.id }}/status">
+            <input type="hidden" name="status" value="blocked">
+            <button type="submit" class="secondary outline">Block</button>
+        </form>
+        {% else %}
+        <form method="post" action="/admin/integrations/{{ integration.id }}/status">
+            <input type="hidden" name="status" value="active">
+            <button type="submit" class="outline">Activate</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <details>
+        <summary>Edit Integration</summary>
+        <form method="post" action="/admin/integrations/{{ integration.id }}/update">
+            <label>Name <input type="text" name="name" value="{{ integration.name }}"></label>
+            <label>Webhook URL <input type="text" name="webhook_url" value="{{ integration.webhook_url or '' }}"></label>
+            <label>Webhook Secret <input type="text" name="webhook_secret" placeholder="Leave blank to keep current"></label>
+            <label>Rate Limit RPM <input type="number" name="rate_limit_rpm" value="{{ integration.rate_limit_rpm }}"></label>
+            <label>Default Free Credits <input type="number" name="default_free_credits" value="{{ integration.default_free_credits }}"></label>
+            <button type="submit">Save Changes</button>
+        </form>
+    </details>
+    {% endif %}
+</article>
+
+<h5>API Keys</h5>
+{% include "api_keys/_key_list.html" %}
+
+{% if admin_user.role in ('super_admin', 'admin') %}
+<details>
+    <summary>Generate New API Key</summary>
+    <form method="post" action="/admin/integrations/{{ integration.id }}/keys">
+        <label>Label <input type="text" name="label" placeholder="Optional label"></label>
+        <button type="submit">Generate Key</button>
+    </form>
+</details>
+{% endif %}
+{% endblock %}

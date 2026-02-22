@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Job Type: {{ job_type.slug }} - AIMG Admin{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ul>
+        <li><a href="/admin/job-types">Job Types</a></li>
+        <li>{{ job_type.slug }}</li>
+    </ul>
+</nav>
+
+<h3>{{ job_type.name }} ({{ job_type.slug }})</h3>
+
+<article>
+    <dl>
+        <dt>ID</dt><dd class="mono">{{ job_type.id }}</dd>
+        <dt>Status</dt><dd><span class="badge badge-{{ job_type.status }}">{{ job_type.status }}</span></dd>
+        <dt>Credit Cost</dt><dd>{{ job_type.credit_cost }}</dd>
+        <dt>Timeout</dt><dd>{{ job_type.timeout_seconds }}s</dd>
+        <dt>Description</dt><dd>{{ job_type.description or '—' }}</dd>
+    </dl>
+
+    {% if admin_user.role == 'super_admin' %}
+    <details>
+        <summary>Edit Job Type</summary>
+        <form method="post" action="/admin/job-types/{{ job_type.id }}/update">
+            <div class="grid">
+                <label>Credit Cost <input type="number" name="credit_cost" value="{{ job_type.credit_cost }}"></label>
+                <label>Timeout (s) <input type="number" name="timeout_seconds" value="{{ job_type.timeout_seconds }}"></label>
+                <label>Status
+                    <select name="status">
+                        {% for s in ['active', 'disabled'] %}
+                        <option value="{{ s }}" {{ 'selected' if job_type.status == s else '' }}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+            <button type="submit">Save</button>
+        </form>
+    </details>
+    {% endif %}
+</article>
+
+<h5>Provider Fallback Chain</h5>
+<table>
+    <thead>
+        <tr>
+            <th>Priority</th>
+            <th>Provider</th>
+            <th>Config Override</th>
+            {% if admin_user.role == 'super_admin' %}
+            <th>Actions</th>
+            {% endif %}
+        </tr>
+    </thead>
+    <tbody>
+    {% for jtp in providers_chain %}
+        {% set p = provider_map.get(jtp.provider_id) %}
+        <tr>
+            <td>{{ jtp.priority }}</td>
+            <td>{% if p %}<a href="/admin/providers/{{ p.id }}">{{ p.name }}</a>{% else %}{{ jtp.provider_id }}{% endif %}</td>
+            <td><pre style="font-size:0.8rem;">{{ jtp.config_override }}</pre></td>
+            {% if admin_user.role == 'super_admin' %}
+            <td>
+                <form method="post" action="/admin/job-types/{{ job_type.id }}/providers/{{ jtp.provider_id }}/remove"
+                      onsubmit="return confirm('Remove this provider?')">
+                    <button type="submit" class="secondary outline" style="padding:0.25rem 0.5rem;font-size:0.8rem;">Remove</button>
+                </form>
+            </td>
+            {% endif %}
+        </tr>
+    {% else %}
+        <tr><td colspan="{{ 4 if admin_user.role == 'super_admin' else 3 }}">No providers linked.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+{% if admin_user.role == 'super_admin' %}
+<details>
+    <summary>Add Provider</summary>
+    <form method="post" action="/admin/job-types/{{ job_type.id }}/providers">
+        <div class="grid">
+            <label>Provider
+                <select name="provider_id" required>
+                    {% for p in all_providers %}
+                    <option value="{{ p.id }}">{{ p.name }} ({{ p.slug }})</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Priority <input type="number" name="priority" value="0"></label>
+        </div>
+        <button type="submit">Add Provider</button>
+    </form>
+</details>
+{% endif %}
+{% endblock %}

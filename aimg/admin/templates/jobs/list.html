@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Jobs - AIMG Admin{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;">
+    <h3>Jobs</h3>
+    <a href="/admin/jobs/export?{{ request.query_params }}" role="button" class="outline">Export CSV</a>
+</div>
+
+<details>
+    <summary>Filters</summary>
+    <form method="get" action="/admin/jobs" class="grid">
+        <label>Status
+            <select name="status">
+                <option value="">All</option>
+                {% for s in ['pending', 'running', 'succeeded', 'failed'] %}
+                <option value="{{ s }}" {{ 'selected' if filters.get('status') == s else '' }}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Integration ID <input type="text" name="integration_id" value="{{ filters.get('integration_id', '') }}"></label>
+        <label>Job Type ID <input type="text" name="job_type_id" value="{{ filters.get('job_type_id', '') }}"></label>
+        <label>Date From <input type="date" name="date_from" value="{{ filters.get('date_from', '') }}"></label>
+        <div style="display:flex;align-items:end;"><button type="submit">Apply</button></div>
+    </form>
+</details>
+
+<div id="content">
+{% include "jobs/_rows.html" %}
+</div>
+{% endblock %}

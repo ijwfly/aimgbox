@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Partners - AIMG Admin{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;">
+    <h3>Partners</h3>
+    {% if admin_user.role in ('super_admin', 'admin') %}
+    <a href="/admin/partners/new" role="button">New Partner</a>
+    {% endif %}
+</div>
+
+<div id="content">
+{% include "partners/_rows.html" %}
+</div>
+{% endblock %}

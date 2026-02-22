@@ -1,0 +1,27 @@
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Status</th>
+            <th>RPM Limit</th>
+            <th>Free Credits</th>
+            <th>Created</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for i in integrations %}
+        <tr>
+            <td><a href="/admin/integrations/{{ i.id }}">{{ i.name }}</a></td>
+            <td><span class="badge badge-{{ i.status }}">{{ i.status }}</span></td>
+            <td>{{ i.rate_limit_rpm }}</td>
+            <td>{{ i.default_free_credits }}</td>
+            <td class="text-muted">{{ i.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td><a href="/admin/integrations/{{ i.id }}">View</a></td>
+        </tr>
+    {% else %}
+        <tr><td colspan="6">No integrations found.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% include "_partials/pagination.html" with context %}

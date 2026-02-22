@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Partner: {{ partner.name }} - AIMG Admin{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ul>
+        <li><a href="/admin/partners">Partners</a></li>
+        <li>{{ partner.name }}</li>
+    </ul>
+</nav>
+
+<h3>{{ partner.name }}</h3>
+
+<article>
+    <dl>
+        <dt>ID</dt><dd class="mono">{{ partner.id }}</dd>
+        <dt>Status</dt><dd><span class="badge badge-{{ partner.status }}">{{ partner.status }}</span></dd>
+        <dt>Created</dt><dd>{{ partner.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</dd>
+        <dt>Updated</dt><dd>{{ partner.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}</dd>
+    </dl>
+
+    {% if admin_user.role in ('super_admin', 'admin') %}
+    <div class="actions">
+        {% if partner.status == 'active' %}
+        <form method="post" action="/admin/partners/{{ partner.id }}/status">
+            <input type="hidden" name="status" value="blocked">
+            <button type="submit" class="secondary outline">Block</button>
+        </form>
+        {% else %}
+        <form method="post" action="/admin/partners/{{ partner.id }}/status">
+            <input type="hidden" name="status" value="active">
+            <button type="submit" class="outline">Activate</button>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
+</article>
+
+<h5>Integrations</h5>
+<p><a href="/admin/integrations?partner_id={{ partner.id }}">View integrations for this partner</a></p>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Job: {{ job.id }} - AIMG Admin{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ul>
+        <li><a href="/admin/jobs">Jobs</a></li>
+        <li>{{ job.id|string|truncate(12, true, '') }}</li>
+    </ul>
+</nav>
+
+<h3>Job Details</h3>
+
+<article>
+    <dl>
+        <dt>ID</dt><dd class="mono">{{ job.id }}</dd>
+        <dt>Status</dt><dd><span class="badge badge-{{ job.status }}">{{ job.status }}</span></dd>
+        <dt>Job Type</dt><dd class="mono"><a href="/admin/job-types/{{ job.job_type_id }}">{{ job.job_type_id }}</a></dd>
+        <dt>Integration</dt><dd class="mono"><a href="/admin/integrations/{{ job.integration_id }}">{{ job.integration_id }}</a></dd>
+        <dt>User</dt><dd class="mono"><a href="/admin/users/{{ job.user_id }}">{{ job.user_id }}</a></dd>
+        <dt>Credits Charged</dt><dd>{{ job.credit_charged }}</dd>
+        <dt>Provider</dt><dd class="mono">{{ job.provider_id or '—' }}</dd>
+        <dt>Attempts</dt><dd>{{ job.attempts }}</dd>
+        {% if job.error_code %}
+        <dt>Error Code</dt><dd>{{ job.error_code }}</dd>
+        <dt>Error Message</dt><dd>{{ job.error_message }}</dd>
+        {% endif %}
+        <dt>Created</dt><dd>{{ job.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</dd>
+        <dt>Started</dt><dd>{{ job.started_at.strftime('%Y-%m-%d %H:%M:%S') if job.started_at else '—' }}</dd>
+        <dt>Completed</dt><dd>{{ job.completed_at.strftime('%Y-%m-%d %H:%M:%S') if job.completed_at else '—' }}</dd>
+    </dl>
+</article>
+
+<h5>Input Data</h5>
+<pre style="background:#f4f4f4;padding:1rem;overflow-x:auto;">{{ job.input_data }}</pre>
+
+{% if job.output_data %}
+<h5>Output Data</h5>
+<pre style="background:#f4f4f4;padding:1rem;overflow-x:auto;">{{ job.output_data }}</pre>
+{% endif %}
+
+{% if attempts %}
+<h5>Attempts</h5>
+<table>
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Provider</th>
+            <th>Status</th>
+            <th>Duration (ms)</th>
+            <th>Error</th>
+            <th>Started</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for a in attempts %}
+        <tr>
+            <td>{{ a.attempt_number }}</td>
+            <td class="mono">{{ a.provider_id|string|truncate(8, true, '') }}</td>
+            <td><span class="badge badge-{{ a.status }}">{{ a.status }}</span></td>
+            <td>{{ a.duration_ms or '—' }}</td>
+            <td>{{ a.error_code or '—' }}</td>
+            <td class="text-muted">{{ a.started_at.strftime('%H:%M:%S') }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - AIMG Admin{% endblock %}
+{% block content %}
+<h3>Dashboard</h3>
+
+<h5>Today</h5>
+<div class="grid">
+    <article class="stat-card">
+        <h2>{{ stats_today.active_count }}</h2>
+        <p class="text-muted">Active Jobs</p>
+    </article>
+    <article class="stat-card">
+        <h2>{{ stats_today.total }}</h2>
+        <p class="text-muted">Total Jobs Today</p>
+    </article>
+    <article class="stat-card">
+        <h2>{{ stats_today.error_pct }}%</h2>
+        <p class="text-muted">Error Rate</p>
+    </article>
+    <article class="stat-card">
+        <h2>{{ stats_today.credits_total }}</h2>
+        <p class="text-muted">Credits Used</p>
+    </article>
+</div>
+
+<h5>All Time</h5>
+<div class="grid">
+    <article class="stat-card">
+        <h2>{{ stats_all.active_count }}</h2>
+        <p class="text-muted">Active Jobs</p>
+    </article>
+    <article class="stat-card">
+        <h2>{{ stats_all.total }}</h2>
+        <p class="text-muted">Total Jobs</p>
+    </article>
+    <article class="stat-card">
+        <h2>{{ stats_all.error_pct }}%</h2>
+        <p class="text-muted">Error Rate</p>
+    </article>
+    <article class="stat-card">
+        <h2>{{ stats_all.credits_total }}</h2>
+        <p class="text-muted">Credits Used</p>
+    </article>
+</div>
+{% endblock %}

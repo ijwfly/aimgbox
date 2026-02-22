@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Audit Log - AIMG Admin{% endblock %}
+{% block content %}
+<h3>Audit Log</h3>
+
+<details>
+    <summary>Filters</summary>
+    <form method="get" action="/admin/audit" class="grid">
+        <label>Entity Type
+            <select name="entity_type">
+                <option value="">All</option>
+                {% for t in ['partner', 'integration', 'api_key', 'user', 'job_type', 'provider'] %}
+                <option value="{{ t }}" {{ 'selected' if filter_entity_type == t else '' }}>{{ t }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Action Prefix <input type="text" name="action_prefix" value="{{ filter_action_prefix }}" placeholder="e.g. partner."></label>
+        <div style="display:flex;align-items:end;"><button type="submit">Apply</button></div>
+    </form>
+</details>
+
+<div id="content">
+{% include "audit/_rows.html" %}
+</div>
+{% endblock %}

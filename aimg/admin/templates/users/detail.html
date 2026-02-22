@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}User: {{ user.external_user_id }} - AIMG Admin{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ul>
+        <li><a href="/admin/users">Users</a></li>
+        <li>{{ user.external_user_id }}</li>
+    </ul>
+</nav>
+
+<h3>User: {{ user.external_user_id }}</h3>
+
+<article>
+    <dl>
+        <dt>ID</dt><dd class="mono">{{ user.id }}</dd>
+        <dt>Integration</dt><dd class="mono"><a href="/admin/integrations/{{ user.integration_id }}">{{ user.integration_id }}</a></dd>
+        <dt>External User ID</dt><dd>{{ user.external_user_id }}</dd>
+        <dt>Free Credits</dt><dd><strong>{{ user.free_credits }}</strong></dd>
+        <dt>Paid Credits</dt><dd><strong>{{ user.paid_credits }}</strong></dd>
+        <dt>Total Balance</dt><dd><strong>{{ user.free_credits + user.paid_credits }}</strong></dd>
+        <dt>Created</dt><dd>{{ user.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</dd>
+    </dl>
+</article>
+
+{% if admin_user.role in ('super_admin', 'admin') %}
+<h5>Adjust Credits</h5>
+<article>
+    <form method="post" action="/admin/users/{{ user.id }}/credits">
+        <div class="grid">
+            <label>Amount <input type="number" name="amount" required placeholder="e.g. 100 or -50"></label>
+            <label>Type
+                <select name="credit_type">
+                    <option value="free">Free</option>
+                    <option value="paid">Paid</option>
+                </select>
+            </label>
+        </div>
+        <label>Comment (required) <input type="text" name="comment" required placeholder="Reason for adjustment"></label>
+        <button type="submit">Adjust Credits</button>
+    </form>
+</article>
+{% endif %}
+
+<h5>Credit History</h5>
+<table>
+    <thead>
+        <tr>
+            <th>Amount</th>
+            <th>Type</th>
+            <th>Reason</th>
+            <th>Balance After</th>
+            <th>Comment</th>
+            <th>Date</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for t in transactions %}
+        <tr>
+            <td>{{ '+' if t.amount > 0 else '' }}{{ t.amount }}</td>
+            <td>{{ t.credit_type }}</td>
+            <td>{{ t.reason }}</td>
+            <td>{{ t.balance_after }}</td>
+            <td>{{ t.comment or '—' }}</td>
+            <td class="text-muted">{{ t.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        </tr>
+    {% else %}
+        <tr><td colspan="6">No transactions.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

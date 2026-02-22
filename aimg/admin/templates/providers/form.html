@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}New Provider - AIMG Admin{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ul>
+        <li><a href="/admin/providers">Providers</a></li>
+        <li>New</li>
+    </ul>
+</nav>
+
+<h3>New Provider</h3>
+
+{% if error %}
+<div class="flash flash-error">{{ error }}</div>
+{% endif %}
+
+<article style="max-width:500px;">
+    <form method="post" action="/admin/providers">
+        <label for="slug">Slug</label>
+        <input type="text" id="slug" name="slug" required placeholder="e.g. replicate">
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" required placeholder="e.g. Replicate">
+        <label for="adapter_class">Adapter Class</label>
+        <input type="text" id="adapter_class" name="adapter_class" required placeholder="e.g. aimg.providers.replicate.ReplicateAdapter">
+        <label for="base_url">Base URL (optional)</label>
+        <input type="text" id="base_url" name="base_url">
+        <label for="api_key">API Key (optional)</label>
+        <input type="password" id="api_key" name="api_key">
+        <button type="submit">Create Provider</button>
+    </form>
+</article>
+{% endblock %}

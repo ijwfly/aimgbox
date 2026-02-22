@@ -68,7 +68,7 @@ tests/
 | 1 | **DONE** | + files, jobs, auth | Полный цикл: upload → job → result |
 | 2 | **DONE** | + meta, balance, history | Два реальных job type, fallback, баланс |
 | 3 | **DONE** | + billing, webhooks, i18n | Все /v1/ эндпоинты, все защитные механизмы |
-| 4 | TODO | + /admin/ | Полное управление через браузер |
+| 4 | **DONE** | + /admin/ | Полное управление через браузер |
 | 5 | TODO | — | Acceptance criteria 100% |
 
 ---
@@ -310,6 +310,28 @@ tests/
 - **E2E:** логин → создание партнёра → интеграция → ключ → корректировка кредитов → просмотр джобов → экспорт CSV
 
 **Результат:** админка полностью работает в браузере
+
+> **Завершён:** ~40 новых файлов (~15 Python, ~25 шаблонов), ~15 изменённых файлов. 73 unit теста проходят (было 56, +17 новых). Ruff lint чистый.
+> **Миграция:** `003_admin_users_and_audit_log.py` — таблицы `admin_users` (id, username, password_hash, role, status, created_at, updated_at) и `audit_log` (id, admin_user_id, action, entity_type, entity_id, details JSONB, ip_address INET, created_at) с индексами по entity и created_at.
+> **Зависимости:** `bcrypt>=4.0.0` добавлен в pyproject.toml.
+> **Модели:** `AdminUser`, `AuditLogEntry` в `aimg/db/models.py`.
+> **Новые repos:** `AdminUserRepo` (get_by_id/username, create, update_status/password, list_all, count), `AuditLogRepo` (create, list_entries с фильтрами entity_type/admin_user_id/action_prefix, count).
+> **Auth:** `aimg/admin/auth.py` — bcrypt hash/verify, Redis sessions (TTL 24h, prefix `aimg:admin_session:`), HMAC-SHA256 cookie signing (`{session_id}.{hmac_hex}`).
+> **Middleware:** `AdminSessionMiddleware` — reads cookie `aimg_admin_session`, verifies HMAC, loads session JSON from Redis → `request.state.admin_user`. Public paths: `/admin/login`, `/admin/health`, `/health`.
+> **RBAC:** `require_auth` (redirect to login), `require_role(*roles)` (403 if role mismatch). Roles: `super_admin` > `admin` > `viewer`.
+> **App factory:** `create_admin_app(settings)` — Starlette + Jinja2Templates + lifespan (db_pool + redis) + AdminSessionMiddleware + TemplateResponse override для admin_user context.
+> **Routes (10 файлов):** auth (login/logout), dashboard (today + all-time stats), partners (CRUD + status toggle), integrations (CRUD + status + update), api_keys (generate JWT + revoke + Redis revoked set), users (search ILIKE + credit adjustment in transaction with mandatory comment), jobs (list with filters + detail with attempts + CSV export), job_types (edit + provider chain add/remove), providers (CRUD with encrypted API keys), audit (log viewer with filters).
+> **Templates (~25 файлов):** Pico CSS + htmx CDN, `base.html` (nav с RBAC, flash messages, badges), login form, dashboard (stat cards grid), list/detail/form для каждой сущности, `_rows.html` partials для htmx-пагинации, `_partials/pagination.html` reusable.
+> **htmx-паттерны:** `HX-Request` header → partial template, live search (`hx-trigger="keyup changed delay:300ms"`), `hx-confirm` для revoke/remove, pagination без перезагрузки.
+> **CSV export:** `export_jobs_csv(jobs)` → Response с Content-Disposition attachment. Колонки: id, status, job_type_id, integration_id, user_id, credit_charged, error_code, created_at, started_at, completed_at.
+> **Audit:** `log_action(request, action, entity_type, entity_id, details)` — записывает admin_user_id, ip_address из request.
+> **Pagination:** `get_page_info(page, total, per_page=50)` — page-based (OFFSET/LIMIT), clamp page to bounds.
+> **CLI:** `aimg create-admin --username X --password Y --role admin|super_admin|viewer`.
+> **Seed:** `aimg seed` создаёт super_admin `admin`/`admin`.
+> **Расширенные repos:** PartnerRepo (+list_all, count, update_status, update_name), IntegrationRepo (+list_all, count, list_by_partner, update_status, update с dynamic SET), ApiKeyRepo (+list_by_integration, revoke), UserRepo (+search ILIKE, count), JobRepo (+list_all admin с 6 фильтрами, count, get_stats), JobAttemptRepo (+list_by_job), JobTypeRepo (+list_all_admin, count_all, update, remove_provider), ProviderRepo (+list_all, count, update), CreditTransactionRepo (+list_by_user, count_by_user).
+> **conftest.py:** +TRUNCATE audit_log/admin_users, fixtures `admin_user` (super_admin), `admin_client` (httpx + session cookie).
+> **Тесты:** unit (test_admin_auth 6, test_admin_pagination 8, test_csv_export 3), functional (test_admin_repos 4, test_admin_auth_flow 5, test_admin_partners 3, test_admin_integrations 3, test_admin_keys 1, test_admin_users 3, test_admin_jobs 4, test_admin_dashboard 2).
+> **Dev-заметка:** Starlette `TemplateResponse` не имеет встроенного context processor — обход через monkey-patch `templates.TemplateResponse` с `setdefault("admin_user", ...)`. Pico CSS v2 + htmx 2.0.4 через CDN (без вендоринга).
 
 ---
 

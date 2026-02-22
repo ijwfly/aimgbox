@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Users - AIMG Admin{% endblock %}
+{% block content %}
+<h3>Users</h3>
+
+<div style="margin-bottom:1rem;">
+    <input type="search" name="q" value="{{ search_query }}" placeholder="Search by user ID or external ID..."
+           hx-get="/admin/users" hx-target="#content" hx-trigger="keyup changed delay:300ms"
+           hx-include="this" style="max-width:400px;">
+</div>
+
+<div id="content">
+{% include "users/_rows.html" %}
+</div>
+{% endblock %}

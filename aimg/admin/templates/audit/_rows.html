@@ -1,0 +1,27 @@
+<table>
+    <thead>
+        <tr>
+            <th>Action</th>
+            <th>Entity</th>
+            <th>Entity ID</th>
+            <th>Admin</th>
+            <th>IP</th>
+            <th>Date</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for e in entries %}
+        <tr>
+            <td>{{ e.action }}</td>
+            <td>{{ e.entity_type }}</td>
+            <td class="mono">{{ (e.entity_id|string|truncate(8, true, '')) if e.entity_id else '—' }}</td>
+            <td class="mono">{{ (e.admin_user_id|string|truncate(8, true, '')) if e.admin_user_id else '—' }}</td>
+            <td class="mono">{{ e.ip_address or '—' }}</td>
+            <td class="text-muted">{{ e.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+        </tr>
+    {% else %}
+        <tr><td colspan="6">No audit entries.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% include "_partials/pagination.html" with context %}

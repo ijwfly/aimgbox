@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Providers - AIMG Admin{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;">
+    <h3>Providers</h3>
+    {% if admin_user.role == 'super_admin' %}
+    <a href="/admin/providers/new" role="button">New Provider</a>
+    {% endif %}
+</div>
+
+<div id="content">
+<table>
+    <thead>
+        <tr>
+            <th>Slug</th>
+            <th>Name</th>
+            <th>Adapter</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for p in providers %}
+        <tr>
+            <td><a href="/admin/providers/{{ p.id }}">{{ p.slug }}</a></td>
+            <td>{{ p.name }}</td>
+            <td class="mono text-muted">{{ p.adapter_class }}</td>
+            <td><span class="badge badge-{{ p.status }}">{{ p.status }}</span></td>
+            <td><a href="/admin/providers/{{ p.id }}">View</a></td>
+        </tr>
+    {% else %}
+        <tr><td colspan="5">No providers found.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% include "_partials/pagination.html" with context %}
+</div>
+{% endblock %}

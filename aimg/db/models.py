@@ -154,3 +154,24 @@ class WebhookDelivery(BaseModel):
     next_retry_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class AdminUser(BaseModel):
+    id: UUID
+    username: str
+    password_hash: str
+    role: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class AuditLogEntry(BaseModel):
+    id: int
+    admin_user_id: UUID | None = None
+    action: str
+    entity_type: str
+    entity_id: UUID | None = None
+    details: dict
+    ip_address: str | None = None
+    created_at: datetime

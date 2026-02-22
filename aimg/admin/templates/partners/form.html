@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}New Partner - AIMG Admin{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ul>
+        <li><a href="/admin/partners">Partners</a></li>
+        <li>New</li>
+    </ul>
+</nav>
+
+<h3>New Partner</h3>
+
+{% if error %}
+<div class="flash flash-error">{{ error }}</div>
+{% endif %}
+
+<article style="max-width:500px;">
+    <form method="post" action="/admin/partners">
+        <label for="name">Partner Name</label>
+        <input type="text" id="name" name="name" required autofocus>
+        <button type="submit">Create Partner</button>
+    </form>
+</article>
+{% endblock %}

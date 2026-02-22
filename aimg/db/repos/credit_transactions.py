@@ -69,6 +69,35 @@ class CreditTransactionRepo(BaseRepo):
         )
         return CreditTransaction(**dict(row)) if row else None
 
+    async def list_by_user(
+        self,
+        user_id: UUID,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+        conn: asyncpg.Connection | None = None,
+    ) -> list[CreditTransaction]:
+        rows = await self._fetch(
+            """SELECT * FROM credit_transactions
+               WHERE user_id = $1
+               ORDER BY created_at DESC LIMIT $2 OFFSET $3""",
+            user_id,
+            limit,
+            offset,
+            conn=conn,
+        )
+        return [CreditTransaction(**dict(r)) for r in rows]
+
+    async def count_by_user(
+        self, user_id: UUID, *, conn: asyncpg.Connection | None = None
+    ) -> int:
+        row = await self._fetchrow(
+            "SELECT count(*) AS cnt FROM credit_transactions WHERE user_id = $1",
+            user_id,
+            conn=conn,
+        )
+        return row["cnt"]
+
     async def get_latest_balances(
         self, *, conn: asyncpg.Connection | None = None
     ) -> list[dict]:

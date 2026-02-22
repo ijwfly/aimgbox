@@ -1,0 +1,17 @@
+{% if page_info.total_pages > 1 %}
+<nav aria-label="Pagination" style="display:flex;justify-content:center;gap:0.5rem;margin-top:1rem;">
+    {% if page_info.has_prev %}
+    <a href="?page={{ page_info.page - 1 }}{{ extra_qs|default('') }}"
+       hx-get="{{ hx_url }}?page={{ page_info.page - 1 }}{{ extra_qs|default('') }}"
+       hx-target="{{ hx_target|default('#content') }}"
+       role="button" class="outline">Prev</a>
+    {% endif %}
+    <span style="padding:0.5rem 1rem;">Page {{ page_info.page }} of {{ page_info.total_pages }} ({{ page_info.total }} total)</span>
+    {% if page_info.has_next %}
+    <a href="?page={{ page_info.page + 1 }}{{ extra_qs|default('') }}"
+       hx-get="{{ hx_url }}?page={{ page_info.page + 1 }}{{ extra_qs|default('') }}"
+       hx-target="{{ hx_target|default('#content') }}"
+       role="button" class="outline">Next</a>
+    {% endif %}
+</nav>
+{% endif %}

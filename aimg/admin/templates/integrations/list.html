@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Integrations - AIMG Admin{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;">
+    <h3>Integrations</h3>
+    {% if admin_user.role in ('super_admin', 'admin') %}
+    <a href="/admin/integrations/new" role="button">New Integration</a>
+    {% endif %}
+</div>
+
+<div id="content">
+{% include "integrations/_rows.html" %}
+</div>
+{% endblock %}

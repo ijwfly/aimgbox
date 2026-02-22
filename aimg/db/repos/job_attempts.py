@@ -41,3 +41,13 @@ class JobAttemptRepo(BaseRepo):
             conn=conn,
         )
         return JobAttempt(**dict(row))
+
+    async def list_by_job(
+        self, job_id: UUID, *, conn: asyncpg.Connection | None = None
+    ) -> list[JobAttempt]:
+        rows = await self._fetch(
+            "SELECT * FROM job_attempts WHERE job_id = $1 ORDER BY attempt_number",
+            job_id,
+            conn=conn,
+        )
+        return [JobAttempt(**dict(r)) for r in rows]

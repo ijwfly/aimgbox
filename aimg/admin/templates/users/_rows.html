@@ -1,0 +1,27 @@
+<table>
+    <thead>
+        <tr>
+            <th>External ID</th>
+            <th>Integration</th>
+            <th>Free Credits</th>
+            <th>Paid Credits</th>
+            <th>Created</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for u in users %}
+        <tr>
+            <td><a href="/admin/users/{{ u.id }}">{{ u.external_user_id }}</a></td>
+            <td class="mono">{{ u.integration_id|string|truncate(8, true, '') }}</td>
+            <td>{{ u.free_credits }}</td>
+            <td>{{ u.paid_credits }}</td>
+            <td class="text-muted">{{ u.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td><a href="/admin/users/{{ u.id }}">View</a></td>
+        </tr>
+    {% else %}
+        <tr><td colspan="6">No users found.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% include "_partials/pagination.html" with context %}

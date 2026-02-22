@@ -42,3 +42,32 @@ class ApiKeyRepo(BaseRepo):
             "SELECT * FROM api_keys WHERE key_hash = $1", key_hash, conn=conn
         )
         return ApiKey(**dict(row)) if row else None
+
+    async def list_by_integration(
+        self,
+        integration_id: UUID,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+        conn: asyncpg.Connection | None = None,
+    ) -> list[ApiKey]:
+        rows = await self._fetch(
+            """SELECT * FROM api_keys WHERE integration_id = $1
+               ORDER BY created_at DESC LIMIT $2 OFFSET $3""",
+            integration_id,
+            limit,
+            offset,
+            conn=conn,
+        )
+        return [ApiKey(**dict(r)) for r in rows]
+
+    async def revoke(
+        self, key_id: UUID, *, conn: asyncpg.Connection | None = None
+    ) -> ApiKey | None:
+        row = await self._fetchrow(
+            """UPDATE api_keys SET is_revoked = true, revoked_at = now()
+               WHERE id = $1 RETURNING *""",
+            key_id,
+            conn=conn,
+        )
+        return ApiKey(**dict(row)) if row else None

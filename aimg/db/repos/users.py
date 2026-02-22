@@ -93,3 +93,70 @@ class UserRepo(BaseRepo):
     ) -> list[User]:
         rows = await self._fetch("SELECT * FROM users", conn=conn)
         return [User(**dict(r)) for r in rows]
+
+    async def search(
+        self,
+        query: str | None = None,
+        integration_id: UUID | None = None,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+        conn: asyncpg.Connection | None = None,
+    ) -> list[User]:
+        conditions: list[str] = []
+        args: list = []
+        idx = 1
+
+        if query:
+            conditions.append(
+                f"(external_user_id ILIKE ${idx} OR id::text ILIKE ${idx})"
+            )
+            args.append(f"%{query}%")
+            idx += 1
+
+        if integration_id:
+            conditions.append(f"integration_id = ${idx}")
+            args.append(integration_id)
+            idx += 1
+
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        args.extend([limit, offset])
+
+        rows = await self._fetch(
+            f"""SELECT * FROM users {where}
+                ORDER BY created_at DESC LIMIT ${idx} OFFSET ${idx + 1}""",
+            *args,
+            conn=conn,
+        )
+        return [User(**dict(r)) for r in rows]
+
+    async def count(
+        self,
+        query: str | None = None,
+        integration_id: UUID | None = None,
+        *,
+        conn: asyncpg.Connection | None = None,
+    ) -> int:
+        conditions: list[str] = []
+        args: list = []
+        idx = 1
+
+        if query:
+            conditions.append(
+                f"(external_user_id ILIKE ${idx} OR id::text ILIKE ${idx})"
+            )
+            args.append(f"%{query}%")
+            idx += 1
+
+        if integration_id:
+            conditions.append(f"integration_id = ${idx}")
+            args.append(integration_id)
+            idx += 1
+
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        row = await self._fetchrow(
+            f"SELECT count(*) AS cnt FROM users {where}",
+            *args,
+            conn=conn,
+        )
+        return row["cnt"]

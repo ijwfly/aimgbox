@@ -1,9 +1,11 @@
 import asyncio
 import os
 
+from aimg.admin.auth import hash_password
 from aimg.common.connections import create_db_pool
 from aimg.common.encryption import encrypt_value
 from aimg.common.settings import Settings
+from aimg.db.repos.admin_users import AdminUserRepo
 from aimg.db.repos.api_keys import ApiKeyRepo
 from aimg.db.repos.integrations import IntegrationRepo
 from aimg.db.repos.job_types import JobTypeRepo
@@ -157,8 +159,19 @@ async def run_seed() -> None:
         await jt_repo.add_provider(txt2img_type.id, provider.id, priority=1)
         print(f"Linked providers to {txt2img_type.slug}: replicate(0), mock(1)")
 
+        # Create admin user
+        admin_repo = AdminUserRepo(db_pool)
+        existing = await admin_repo.get_by_username("admin")
+        if not existing:
+            pw_hash = hash_password("admin")
+            admin_user = await admin_repo.create("admin", pw_hash, "super_admin")
+            print(f"Admin user: {admin_user.username} (role={admin_user.role}, password=admin)")
+        else:
+            print(f"Admin user already exists: {existing.username}")
+
         print("\n--- Seed complete ---")
         print(f"Use this API key: {token}")
+        print("Admin login: admin / admin")
     finally:
         await db_pool.close()
 

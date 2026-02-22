@@ -162,3 +162,153 @@ class JobRepo(BaseRepo):
             provider_id,
             conn=conn,
         )
+
+    async def list_all(
+        self,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+        status: str | None = None,
+        integration_id: UUID | None = None,
+        job_type_id: UUID | None = None,
+        user_id: UUID | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        conn: asyncpg.Connection | None = None,
+    ) -> list[Job]:
+        conditions: list[str] = []
+        args: list = []
+        idx = 1
+
+        if status:
+            conditions.append(f"status = ${idx}")
+            args.append(status)
+            idx += 1
+
+        if integration_id:
+            conditions.append(f"integration_id = ${idx}")
+            args.append(integration_id)
+            idx += 1
+
+        if job_type_id:
+            conditions.append(f"job_type_id = ${idx}")
+            args.append(job_type_id)
+            idx += 1
+
+        if user_id:
+            conditions.append(f"user_id = ${idx}")
+            args.append(user_id)
+            idx += 1
+
+        if date_from:
+            conditions.append(f"created_at >= ${idx}")
+            args.append(date_from)
+            idx += 1
+
+        if date_to:
+            conditions.append(f"created_at <= ${idx}")
+            args.append(date_to)
+            idx += 1
+
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        args.extend([limit, offset])
+
+        rows = await self._fetch(
+            f"""SELECT * FROM jobs {where}
+                ORDER BY created_at DESC LIMIT ${idx} OFFSET ${idx + 1}""",
+            *args,
+            conn=conn,
+        )
+        return [Job(**dict(r)) for r in rows]
+
+    async def count(
+        self,
+        *,
+        status: str | None = None,
+        integration_id: UUID | None = None,
+        job_type_id: UUID | None = None,
+        user_id: UUID | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        conn: asyncpg.Connection | None = None,
+    ) -> int:
+        conditions: list[str] = []
+        args: list = []
+        idx = 1
+
+        if status:
+            conditions.append(f"status = ${idx}")
+            args.append(status)
+            idx += 1
+
+        if integration_id:
+            conditions.append(f"integration_id = ${idx}")
+            args.append(integration_id)
+            idx += 1
+
+        if job_type_id:
+            conditions.append(f"job_type_id = ${idx}")
+            args.append(job_type_id)
+            idx += 1
+
+        if user_id:
+            conditions.append(f"user_id = ${idx}")
+            args.append(user_id)
+            idx += 1
+
+        if date_from:
+            conditions.append(f"created_at >= ${idx}")
+            args.append(date_from)
+            idx += 1
+
+        if date_to:
+            conditions.append(f"created_at <= ${idx}")
+            args.append(date_to)
+            idx += 1
+
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        row = await self._fetchrow(
+            f"SELECT count(*) AS cnt FROM jobs {where}",
+            *args,
+            conn=conn,
+        )
+        return row["cnt"]
+
+    async def get_stats(
+        self,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        *,
+        conn: asyncpg.Connection | None = None,
+    ) -> dict:
+        now_condition = ""
+        args: list = []
+        idx = 1
+
+        if date_from:
+            now_condition += f" AND created_at >= ${idx}"
+            args.append(date_from)
+            idx += 1
+        if date_to:
+            now_condition += f" AND created_at <= ${idx}"
+            args.append(date_to)
+            idx += 1
+
+        row = await self._fetchrow(
+            f"""SELECT
+                count(*) FILTER (WHERE status IN ('pending','running')) AS active_count,
+                count(*) AS total,
+                count(*) FILTER (WHERE status = 'failed') AS failed_count,
+                coalesce(sum(credit_charged), 0) AS credits_total
+            FROM jobs WHERE true {now_condition}""",
+            *args,
+            conn=conn,
+        )
+        total = row["total"] or 0
+        failed = row["failed_count"] or 0
+        return {
+            "active_count": row["active_count"] or 0,
+            "total": total,
+            "error_pct": round(failed / total * 100, 1) if total else 0,
+            "credits_total": row["credits_total"],
+        }

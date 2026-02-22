@@ -1,0 +1,37 @@
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Label</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for k in keys %}
+        <tr>
+            <td class="mono">{{ k.id|string|truncate(8, true, '') }}</td>
+            <td>{{ k.label or '—' }}</td>
+            <td>
+                {% if k.is_revoked %}
+                <span class="badge badge-revoked">revoked</span>
+                {% else %}
+                <span class="badge badge-active">active</span>
+                {% endif %}
+            </td>
+            <td class="text-muted">{{ k.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>
+                {% if not k.is_revoked and admin_user.role in ('super_admin', 'admin') %}
+                <form method="post" action="/admin/keys/{{ k.id }}/revoke"
+                      onsubmit="return confirm('Revoke this API key?')">
+                    <button type="submit" class="secondary outline" style="padding:0.25rem 0.5rem;font-size:0.8rem;">Revoke</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+    {% else %}
+        <tr><td colspan="5">No API keys.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>

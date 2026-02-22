@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}API Key Generated - AIMG Admin{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ul>
+        <li><a href="/admin/integrations">Integrations</a></li>
+        <li><a href="/admin/integrations/{{ integration.id }}">{{ integration.name }}</a></li>
+        <li>Key Generated</li>
+    </ul>
+</nav>
+
+<h3>API Key Generated</h3>
+
+<article>
+    <div class="flash flash-success">
+        <strong>Copy this JWT token now!</strong> It will not be shown again.
+    </div>
+    <pre class="mono" style="background:#f4f4f4;padding:1rem;overflow-x:auto;">{{ token }}</pre>
+    <p><a href="/admin/integrations/{{ integration.id }}">Back to integration</a></p>
+</article>
+
+<h5>All Keys for {{ integration.name }}</h5>
+{% include "api_keys/_key_list.html" %}
+{% endblock %}

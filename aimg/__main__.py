@@ -1,9 +1,14 @@
 import sys
 
+USAGE = (
+    "Usage: python -m aimg "
+    "<api|worker|admin|seed|sync-job-types|reconcile-balances|create-admin>"
+)
+
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print("Usage: python -m aimg <api|worker|admin|seed|sync-job-types|reconcile-balances>")
+        print(USAGE)
         sys.exit(1)
 
     command = sys.argv[1]
@@ -44,9 +49,13 @@ def main() -> None:
         from aimg.scripts.reconcile import main as reconcile_main
 
         reconcile_main()
+    elif command == "create-admin":
+        from aimg.scripts.create_admin import main as create_admin_main
+
+        create_admin_main()
     else:
         print(f"Unknown command: {command}")
-        print("Usage: python -m aimg <api|worker|admin|seed|sync-job-types|reconcile-balances>")
+        print(USAGE)
         sys.exit(1)
 
 

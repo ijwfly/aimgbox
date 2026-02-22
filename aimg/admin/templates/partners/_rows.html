@@ -1,0 +1,23 @@
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for p in partners %}
+        <tr>
+            <td><a href="/admin/partners/{{ p.id }}">{{ p.name }}</a></td>
+            <td><span class="badge badge-{{ p.status }}">{{ p.status }}</span></td>
+            <td class="text-muted">{{ p.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td><a href="/admin/partners/{{ p.id }}">View</a></td>
+        </tr>
+    {% else %}
+        <tr><td colspan="4">No partners found.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% include "_partials/pagination.html" with context %}

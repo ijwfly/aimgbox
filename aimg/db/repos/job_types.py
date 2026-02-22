@@ -72,6 +72,82 @@ class JobTypeRepo(BaseRepo):
         )
         return [JobTypeProvider(**dict(r)) for r in rows]
 
+    async def list_all_admin(
+        self,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+        conn: asyncpg.Connection | None = None,
+    ) -> list[JobType]:
+        rows = await self._fetch(
+            "SELECT * FROM job_types ORDER BY slug LIMIT $1 OFFSET $2",
+            limit,
+            offset,
+            conn=conn,
+        )
+        return [JobType(**dict(r)) for r in rows]
+
+    async def count_all(self, *, conn: asyncpg.Connection | None = None) -> int:
+        row = await self._fetchrow(
+            "SELECT count(*) AS cnt FROM job_types", conn=conn
+        )
+        return row["cnt"]
+
+    async def update(
+        self,
+        jt_id: UUID,
+        *,
+        credit_cost: int | None = None,
+        timeout_seconds: int | None = None,
+        status: str | None = None,
+        conn: asyncpg.Connection | None = None,
+    ) -> JobType | None:
+        sets: list[str] = []
+        args: list = []
+        idx = 2  # $1 = id
+
+        if credit_cost is not None:
+            sets.append(f"credit_cost = ${idx}")
+            args.append(credit_cost)
+            idx += 1
+
+        if timeout_seconds is not None:
+            sets.append(f"timeout_seconds = ${idx}")
+            args.append(timeout_seconds)
+            idx += 1
+
+        if status is not None:
+            sets.append(f"status = ${idx}")
+            args.append(status)
+            idx += 1
+
+        if not sets:
+            return await self.get_by_id(jt_id, conn=conn)
+
+        sets.append("updated_at = now()")
+        row = await self._fetchrow(
+            f"UPDATE job_types SET {', '.join(sets)} WHERE id = $1 RETURNING *",
+            jt_id,
+            *args,
+            conn=conn,
+        )
+        return JobType(**dict(row)) if row else None
+
+    async def remove_provider(
+        self,
+        job_type_id: UUID,
+        provider_id: UUID,
+        *,
+        conn: asyncpg.Connection | None = None,
+    ) -> bool:
+        result = await self._execute(
+            "DELETE FROM job_type_providers WHERE job_type_id = $1 AND provider_id = $2",
+            job_type_id,
+            provider_id,
+            conn=conn,
+        )
+        return result.endswith("1")
+
     async def add_provider(
         self,
         job_type_id: UUID,

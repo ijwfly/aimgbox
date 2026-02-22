@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}New Integration - AIMG Admin{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ul>
+        <li><a href="/admin/integrations">Integrations</a></li>
+        <li>New</li>
+    </ul>
+</nav>
+
+<h3>New Integration</h3>
+
+{% if error %}
+<div class="flash flash-error">{{ error }}</div>
+{% endif %}
+
+<article style="max-width:500px;">
+    <form method="post" action="/admin/integrations">
+        <label for="partner_id">Partner</label>
+        <select id="partner_id" name="partner_id" required>
+            <option value="">Select partner...</option>
+            {% for p in partners %}
+            <option value="{{ p.id }}">{{ p.name }}</option>
+            {% endfor %}
+        </select>
+        <label for="name">Integration Name</label>
+        <input type="text" id="name" name="name" required>
+        <label for="default_free_credits">Default Free Credits</label>
+        <input type="number" id="default_free_credits" name="default_free_credits" value="10">
+        <label for="webhook_url">Webhook URL (optional)</label>
+        <input type="url" id="webhook_url" name="webhook_url">
+        <label for="webhook_secret">Webhook Secret (optional)</label>
+        <input type="text" id="webhook_secret" name="webhook_secret">
+        <button type="submit">Create Integration</button>
+    </form>
+</article>
+{% endblock %}

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}AIMG Admin{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <style>
+        nav ul li { font-size: 0.9rem; }
+        .flash { padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 1rem; }
+        .flash-error { background: #fdd; color: #900; }
+        .flash-success { background: #dfd; color: #060; }
+        table { font-size: 0.9rem; }
+        .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
+        .badge-active { background: #d4edda; color: #155724; }
+        .badge-blocked, .badge-revoked { background: #f8d7da; color: #721c24; }
+        .badge-pending { background: #fff3cd; color: #856404; }
+        .badge-running { background: #cce5ff; color: #004085; }
+        .badge-succeeded { background: #d4edda; color: #155724; }
+        .badge-failed { background: #f8d7da; color: #721c24; }
+        .badge-viewer { background: #e2e3e5; color: #383d41; }
+        .badge-admin { background: #cce5ff; color: #004085; }
+        .badge-super_admin { background: #d6c2f0; color: #3d1f6e; }
+        .text-muted { color: var(--pico-muted-color); font-size: 0.85rem; }
+        .stat-card { text-align: center; padding: 1rem; }
+        .stat-card h2 { margin-bottom: 0.25rem; }
+        .actions { display: flex; gap: 0.5rem; align-items: center; }
+        .mono { font-family: monospace; font-size: 0.85rem; word-break: break-all; }
+    </style>
+</head>
+<body>
+    <nav class="container-fluid">
+        <ul>
+            <li><strong>AIMG Admin</strong></li>
+        </ul>
+        {% if admin_user %}
+        <ul>
+            <li><a href="/admin/dashboard">Dashboard</a></li>
+            <li><a href="/admin/partners">Partners</a></li>
+            <li><a href="/admin/integrations">Integrations</a></li>
+            <li><a href="/admin/users">Users</a></li>
+            <li><a href="/admin/jobs">Jobs</a></li>
+            {% if admin_user.role in ('super_admin', 'admin') %}
+            <li><a href="/admin/job-types">Job Types</a></li>
+            <li><a href="/admin/providers">Providers</a></li>
+            {% endif %}
+            <li><a href="/admin/audit">Audit Log</a></li>
+            <li>
+                <small>{{ admin_user.username }} <span class="badge badge-{{ admin_user.role }}">{{ admin_user.role }}</span></small>
+                &nbsp;<a href="/admin/logout" role="button" class="outline secondary" style="padding:0.25rem 0.5rem;font-size:0.8rem;">Logout</a>
+            </li>
+        </ul>
+        {% endif %}
+    </nav>
+
+    <main class="container">
+        {% if flash_error %}
+        <div class="flash flash-error">{{ flash_error }}</div>
+        {% endif %}
+        {% if flash_success %}
+        <div class="flash flash-success">{{ flash_success }}</div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="container">
+        <small class="text-muted">AIMG Admin Panel</small>
+    </footer>
+</body>
+</html>

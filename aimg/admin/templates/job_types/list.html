@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Job Types - AIMG Admin{% endblock %}
+{% block content %}
+<h3>Job Types</h3>
+
+<div id="content">
+<table>
+    <thead>
+        <tr>
+            <th>Slug</th>
+            <th>Name</th>
+            <th>Status</th>
+            <th>Credit Cost</th>
+            <th>Timeout (s)</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for jt in job_types %}
+        <tr>
+            <td><a href="/admin/job-types/{{ jt.id }}">{{ jt.slug }}</a></td>
+            <td>{{ jt.name }}</td>
+            <td><span class="badge badge-{{ jt.status }}">{{ jt.status }}</span></td>
+            <td>{{ jt.credit_cost }}</td>
+            <td>{{ jt.timeout_seconds }}</td>
+            <td><a href="/admin/job-types/{{ jt.id }}">View</a></td>
+        </tr>
+    {% else %}
+        <tr><td colspan="6">No job types found.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% include "_partials/pagination.html" with context %}
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Status</th>
+            <th>Credits</th>
+            <th>Attempts</th>
+            <th>Created</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for j in jobs %}
+        <tr>
+            <td class="mono"><a href="/admin/jobs/{{ j.id }}">{{ j.id|string|truncate(8, true, '') }}</a></td>
+            <td><span class="badge badge-{{ j.status }}">{{ j.status }}</span></td>
+            <td>{{ j.credit_charged }}</td>
+            <td>{{ j.attempts }}</td>
+            <td class="text-muted">{{ j.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td><a href="/admin/jobs/{{ j.id }}">View</a></td>
+        </tr>
+    {% else %}
+        <tr><td colspan="6">No jobs found.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% include "_partials/pagination.html" with context %}

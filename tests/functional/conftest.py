@@ -3,10 +3,13 @@ import os
 import httpx
 import pytest
 
+from aimg.admin.app import create_admin_app
+from aimg.admin.auth import create_session, hash_password
 from aimg.api.app import create_app
 from aimg.common.connections import create_db_pool, create_redis_client, create_s3_client
 from aimg.common.i18n import load_locales
 from aimg.common.settings import Settings
+from aimg.db.repos.admin_users import AdminUserRepo
 from aimg.db.repos.api_keys import ApiKeyRepo
 from aimg.db.repos.integrations import IntegrationRepo
 from aimg.db.repos.job_types import JobTypeRepo
@@ -58,7 +61,8 @@ async def cleanup_db(db_pool):
     yield
     async with db_pool.acquire() as conn:
         await conn.execute("""
-            TRUNCATE webhook_deliveries, credit_transactions,
+            TRUNCATE audit_log, admin_users,
+                     webhook_deliveries, credit_transactions,
                      job_attempts, jobs, files, job_type_providers,
                      users, api_keys, integrations, job_types,
                      providers, partners
@@ -182,3 +186,36 @@ async def seeded_data(db_pool, settings):
         "job_type": job_type,
         "txt2img_type": txt2img_type,
     }
+
+
+@pytest.fixture
+async def admin_user(db_pool):
+    """Create a super_admin user in the database."""
+    repo = AdminUserRepo(db_pool)
+    pw_hash = hash_password("testpass")
+    user = await repo.create("testadmin", pw_hash, "super_admin")
+    return user
+
+
+@pytest.fixture
+async def admin_client(settings, admin_user):
+    """httpx.AsyncClient with admin app and authenticated session."""
+    app = create_admin_app(settings)
+
+    app.state.settings = settings
+    app.state.db_pool = await create_db_pool(settings)
+    app.state.redis = create_redis_client(settings)
+
+    cookie_value = await create_session(
+        app.state.redis, admin_user, settings.admin_session_secret,
+    )
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://testserver",
+        cookies={"aimg_admin_session": cookie_value},
+    ) as client:
+        yield client
+
+    await app.state.db_pool.close()
+    await app.state.redis.aclose()

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Provider: {{ provider.name }} - AIMG Admin{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ul>
+        <li><a href="/admin/providers">Providers</a></li>
+        <li>{{ provider.name }}</li>
+    </ul>
+</nav>
+
+<h3>{{ provider.name }} ({{ provider.slug }})</h3>
+
+<article>
+    <dl>
+        <dt>ID</dt><dd class="mono">{{ provider.id }}</dd>
+        <dt>Slug</dt><dd>{{ provider.slug }}</dd>
+        <dt>Adapter Class</dt><dd class="mono">{{ provider.adapter_class }}</dd>
+        <dt>Base URL</dt><dd class="mono">{{ provider.base_url or '—' }}</dd>
+        <dt>API Key</dt><dd class="mono">****masked****</dd>
+        <dt>Status</dt><dd><span class="badge badge-{{ provider.status }}">{{ provider.status }}</span></dd>
+        <dt>Config</dt><dd><pre style="font-size:0.8rem;">{{ provider.config }}</pre></dd>
+        <dt>Created</dt><dd>{{ provider.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</dd>
+    </dl>
+
+    {% if admin_user.role == 'super_admin' %}
+    <details>
+        <summary>Edit Provider</summary>
+        <form method="post" action="/admin/providers/{{ provider.id }}/update">
+            <label>Name <input type="text" name="name" value="{{ provider.name }}"></label>
+            <label>Adapter Class <input type="text" name="adapter_class" value="{{ provider.adapter_class }}"></label>
+            <label>Base URL <input type="text" name="base_url" value="{{ provider.base_url or '' }}"></label>
+            <label>API Key (leave blank to keep current) <input type="password" name="api_key" placeholder="New API key"></label>
+            <label>Status
+                <select name="status">
+                    {% for s in ['active', 'disabled'] %}
+                    <option value="{{ s }}" {{ 'selected' if provider.status == s else '' }}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <button type="submit">Save Changes</button>
+        </form>
+    </details>
+    {% endif %}
+</article>
+{% endblock %}
