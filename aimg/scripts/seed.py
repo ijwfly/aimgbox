@@ -29,7 +29,9 @@ async def run_seed() -> None:
 
         # Create integration
         integration = await integration_repo.create(
-            partner.id, "Test Integration", default_free_credits=10
+            partner.id, "Test Integration", default_free_credits=10,
+            webhook_url="http://localhost:8888/webhook",
+            webhook_secret="test-webhook-secret",
         )
         print(f"Integration: {integration.id} ({integration.name})")
 

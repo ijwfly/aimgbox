@@ -1,3 +1,4 @@
+import time
 from typing import Annotated
 
 import asyncpg
@@ -5,13 +6,14 @@ import redis.asyncio as aioredis
 import structlog
 from fastapi import Depends, Header, Request
 
-from aimg.api.errors import AuthError
+from aimg.api.errors import AuthError, RateLimitedError
 from aimg.common.settings import Settings
 from aimg.db.models import Integration, User
 from aimg.db.repos.api_keys import ApiKeyRepo
 from aimg.db.repos.integrations import IntegrationRepo
 from aimg.db.repos.users import UserRepo
 from aimg.services.auth import hash_api_key, verify_api_key
+from aimg.services.rate_limit import check_integration_rpm
 
 logger = structlog.get_logger()
 
@@ -33,6 +35,7 @@ def get_settings(request: Request) -> Settings:
 
 
 async def get_current_integration(
+    request: Request,
     x_api_key: Annotated[str, Header()],
     db_pool: asyncpg.Pool = Depends(get_db_pool),
     redis_client: aioredis.Redis = Depends(get_redis),
@@ -69,6 +72,16 @@ async def get_current_integration(
         raise AuthError("Integration not found")
     if integration.status != "active":
         raise AuthError("Integration is not active")
+
+    # Rate limit: integration RPM
+    allowed, limit, remaining, reset_ts = await check_integration_rpm(
+        redis_client, integration.id, integration.rate_limit_rpm
+    )
+    request.state.rate_limit_limit = limit
+    request.state.rate_limit_remaining = remaining
+    request.state.rate_limit_reset = reset_ts
+    if not allowed:
+        raise RateLimitedError(retry_after=max(1, reset_ts - int(time.time())))
 
     return integration
 

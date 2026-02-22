@@ -23,14 +23,19 @@ class IntegrationRepo(BaseRepo):
         name: str,
         *,
         default_free_credits: int = 10,
+        webhook_url: str | None = None,
+        webhook_secret: str | None = None,
         conn: asyncpg.Connection | None = None,
     ) -> Integration:
         row = await self._fetchrow(
-            """INSERT INTO integrations (partner_id, name, default_free_credits)
-               VALUES ($1, $2, $3) RETURNING *""",
+            """INSERT INTO integrations
+               (partner_id, name, default_free_credits, webhook_url, webhook_secret)
+               VALUES ($1, $2, $3, $4, $5) RETURNING *""",
             partner_id,
             name,
             default_free_credits,
+            webhook_url,
+            webhook_secret,
             conn=conn,
         )
         return Integration(**dict(row))

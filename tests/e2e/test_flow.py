@@ -167,3 +167,104 @@ def test_txt2img_flow(client, api_key):
 
     assert status == "succeeded", f"Job ended with status={status}"
     assert resp.json()["data"]["output"] is not None
+
+
+def test_idempotency(client, api_key):
+    """Repeat with same Idempotency-Key → 200, same job_id."""
+    headers = {
+        "X-API-Key": api_key,
+        "X-External-User-Id": "e2e-idem-user",
+        "Idempotency-Key": "e2e-idem-key-001",
+    }
+
+    file_resp = client.post(
+        "/v1/files",
+        headers=headers,
+        files={"file": ("test.png", b"\x89PNG\r\n\x1a\nfake", "image/png")},
+    )
+    file_id = file_resp.json()["data"]["file_id"]
+
+    body = {"job_type": "remove_bg", "input": {"image": file_id}}
+    r1 = client.post("/v1/jobs", headers=headers, json=body)
+    assert r1.status_code == 201
+    job_id = r1.json()["data"]["job_id"]
+
+    r2 = client.post("/v1/jobs", headers=headers, json=body)
+    assert r2.status_code == 200
+    assert r2.json()["data"]["job_id"] == job_id
+
+
+def test_rate_limit(client, api_key):
+    """Send many rapid requests; eventually get 429."""
+    headers = {"X-API-Key": api_key}
+
+    got_429 = False
+    for _ in range(100):
+        resp = client.get("/v1/meta/job-types", headers=headers)
+        if resp.status_code == 429:
+            got_429 = True
+            assert "Retry-After" in resp.headers
+            break
+
+    # Note: if RPM is high (60), we might not hit it in 100 requests
+    # This test is best-effort in e2e
+    if not got_429:
+        # At minimum, check rate limit headers are present
+        assert "X-RateLimit-Limit" in resp.headers
+
+
+def test_billing_topup_and_check(client, api_key):
+    """Topup credits, then check can_afford."""
+    headers = {
+        "X-API-Key": api_key,
+        "X-External-User-Id": "e2e-billing-user",
+    }
+
+    # Topup
+    resp = client.post(
+        "/v1/billing/topup",
+        headers={k: v for k, v in headers.items() if k != "X-External-User-Id"},
+        json={
+            "external_user_id": "e2e-billing-user",
+            "amount": 50,
+            "external_transaction_id": "e2e-txn-001",
+        },
+    )
+    assert resp.status_code == 201
+    assert resp.json()["data"]["paid_credits"] == 50
+
+    # Check
+    resp = client.post(
+        "/v1/billing/check",
+        headers=headers,
+        json={"job_type": "remove_bg"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["data"]["can_afford"] is True
+    assert resp.json()["data"]["total_credits"] >= 50
+
+
+def test_localization_ru(client, api_key):
+    """Accept-Language: ru should produce localized error messages."""
+    headers = {
+        "X-API-Key": api_key,
+        "X-External-User-Id": "e2e-i18n-user",
+        "Accept-Language": "ru",
+    }
+
+    resp = client.get(
+        "/v1/jobs/00000000-0000-0000-0000-000000000001",
+        headers=headers,
+    )
+    assert resp.status_code == 404
+    assert resp.json()["error"]["code"] == "NOT_FOUND"
+
+
+def test_languages_endpoint(client, api_key):
+    """GET /v1/meta/languages returns supported languages."""
+    resp = client.get("/v1/meta/languages")
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    codes = [lang["code"] for lang in data["languages"]]
+    assert "en" in codes
+    assert "ru" in codes

@@ -136,5 +136,21 @@ class CreditTransaction(BaseModel):
     job_id: UUID | None = None
     admin_user_id: UUID | None = None
     comment: str | None = None
+    external_transaction_id: str | None = None
     balance_after: int
     created_at: datetime
+
+
+class WebhookDelivery(BaseModel):
+    id: UUID
+    integration_id: UUID
+    job_id: UUID
+    event: str
+    payload: dict
+    status: str
+    attempts: int
+    last_status_code: int | None = None
+    last_error: str | None = None
+    next_retry_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime

@@ -68,3 +68,28 @@ class UserRepo(BaseRepo):
             conn=conn,
         )
         return result.endswith("1")
+
+    async def force_set_credits(
+        self,
+        user_id: UUID,
+        free_credits: int,
+        paid_credits: int,
+        *,
+        conn: asyncpg.Connection | None = None,
+    ) -> bool:
+        result = await self._execute(
+            """UPDATE users
+               SET free_credits = $2, paid_credits = $3, updated_at = now()
+               WHERE id = $1""",
+            user_id,
+            free_credits,
+            paid_credits,
+            conn=conn,
+        )
+        return result.endswith("1")
+
+    async def list_all(
+        self, *, conn: asyncpg.Connection | None = None
+    ) -> list[User]:
+        rows = await self._fetch("SELECT * FROM users", conn=conn)
+        return [User(**dict(r)) for r in rows]

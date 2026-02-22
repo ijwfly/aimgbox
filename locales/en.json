@@ -1,0 +1,15 @@
+{
+  "UNAUTHORIZED": "Invalid or missing API key",
+  "FORBIDDEN": "Access denied",
+  "NOT_FOUND": "Resource not found",
+  "INVALID_INPUT": "Invalid input data",
+  "INVALID_FILE": "Invalid file",
+  "INVALID_JOB_TYPE": "Unknown job type",
+  "INSUFFICIENT_CREDITS": "Insufficient credits. Required: {required}, available: {available}",
+  "RATE_LIMITED": "Rate limit exceeded. Try again later",
+  "INVALID_AMOUNT": "Invalid amount",
+  "PROVIDER_ERROR": "Provider error",
+  "TIMEOUT": "Request timed out",
+  "INTERNAL": "Internal server error",
+  "DUPLICATE_TOPUP": "Duplicate top-up transaction"
+}

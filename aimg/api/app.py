@@ -6,12 +6,14 @@ from fastapi import FastAPI
 
 from aimg.api.errors import AppError, app_error_handler
 from aimg.api.middleware import RequestIdMiddleware
+from aimg.api.routes.billing import router as billing_router
 from aimg.api.routes.files import router as files_router
 from aimg.api.routes.health import router as health_router
 from aimg.api.routes.jobs import router as jobs_router
 from aimg.api.routes.meta import router as meta_router
 from aimg.api.routes.users import router as users_router
 from aimg.common.connections import create_db_pool, create_redis_client, create_s3_client
+from aimg.common.i18n import load_locales
 from aimg.common.logging import configure_logging
 from aimg.common.settings import Settings
 
@@ -26,6 +28,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator:
+        load_locales()
         app.state.settings = settings
 
         # Database pool
@@ -68,6 +71,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
     app.add_exception_handler(AppError, app_error_handler)
     app.include_router(health_router)
+    app.include_router(billing_router)
     app.include_router(files_router)
     app.include_router(jobs_router)
     app.include_router(meta_router)

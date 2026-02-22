@@ -5,6 +5,7 @@ import pytest
 
 from aimg.api.app import create_app
 from aimg.common.connections import create_db_pool, create_redis_client, create_s3_client
+from aimg.common.i18n import load_locales
 from aimg.common.settings import Settings
 from aimg.db.repos.api_keys import ApiKeyRepo
 from aimg.db.repos.integrations import IntegrationRepo
@@ -12,6 +13,11 @@ from aimg.db.repos.job_types import JobTypeRepo
 from aimg.db.repos.partners import PartnerRepo
 from aimg.db.repos.providers import ProviderRepo
 from aimg.services.auth import generate_api_key, hash_api_key
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _load_locales():
+    load_locales()
 
 
 @pytest.fixture
@@ -39,14 +45,23 @@ async def db_pool(settings):
     await pool.close()
 
 
+@pytest.fixture
+async def redis_client(settings):
+    client = create_redis_client(settings)
+    yield client
+    await client.flushdb()
+    await client.aclose()
+
+
 @pytest.fixture(autouse=True)
 async def cleanup_db(db_pool):
     yield
     async with db_pool.acquire() as conn:
         await conn.execute("""
-            TRUNCATE credit_transactions, job_attempts, jobs,
-                     files, job_type_providers, users, api_keys,
-                     integrations, job_types, providers, partners
+            TRUNCATE webhook_deliveries, credit_transactions,
+                     job_attempts, jobs, files, job_type_providers,
+                     users, api_keys, integrations, job_types,
+                     providers, partners
             CASCADE
         """)
 
@@ -91,7 +106,9 @@ async def seeded_data(db_pool, settings):
 
     partner = await partner_repo.create("Test Partner")
     integration = await integration_repo.create(
-        partner.id, "Test Integration", default_free_credits=10
+        partner.id, "Test Integration", default_free_credits=10,
+        webhook_url="http://localhost:8888/webhook",
+        webhook_secret="test-webhook-secret",
     )
 
     token = generate_api_key(

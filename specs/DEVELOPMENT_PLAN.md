@@ -67,7 +67,7 @@ tests/
 | 0 | **DONE** | `GET /health` | Сервис жив, подключения работают |
 | 1 | **DONE** | + files, jobs, auth | Полный цикл: upload → job → result |
 | 2 | **DONE** | + meta, balance, history | Два реальных job type, fallback, баланс |
-| 3 | TODO | + billing, webhooks, i18n | Все /v1/ эндпоинты, все защитные механизмы |
+| 3 | **DONE** | + billing, webhooks, i18n | Все /v1/ эндпоинты, все защитные механизмы |
 | 4 | TODO | + /admin/ | Полное управление через браузер |
 | 5 | TODO | — | Acceptance criteria 100% |
 
@@ -256,6 +256,22 @@ tests/
 - **E2E:** идемпотентность (повтор → 200), rate limit (429 + Retry-After), webhook доставлен при succeeded/failed, topup → баланс увеличен, check → can_afford, ошибки на русском при `Accept-Language: ru`
 
 **Результат:** API полностью функционален для партнёров (все /v1/ эндпоинты работают)
+
+> **Завершён:** 8 новых файлов, 12 изменённых, 10 новых тестовых файлов. 56 unit тестов проходят (было 42, +14 новых). Ruff lint чистый.
+> **Миграция:** `002_webhook_deliveries.py` — таблица `webhook_deliveries` (id, integration_id, job_id, event, payload, status, attempts, last_status_code, last_error, next_retry_at, created_at, updated_at) + колонка `external_transaction_id` на `credit_transactions` с unique partial index.
+> **Новые модули:** `aimg/common/i18n.py` (загрузка JSON-локалей, `translate_error()` с fallback), `aimg/services/rate_limit.py` (sliding window через Redis sorted sets), `aimg/services/webhooks.py` (HMAC-SHA256 подпись, payload builder, HTTP POST доставка, retry backoff 10/60/300s), `aimg/db/repos/webhook_deliveries.py` (CRUD), `aimg/api/routes/billing.py` (topup + check), `aimg/scripts/reconcile.py` (CLI reconcile-balances).
+> **Локали:** `locales/en.json`, `locales/ru.json` — 13 кодов ошибок (UNAUTHORIZED, FORBIDDEN, NOT_FOUND, INVALID_INPUT, INVALID_FILE, INVALID_JOB_TYPE, INSUFFICIENT_CREDITS, RATE_LIMITED, INVALID_AMOUNT, PROVIDER_ERROR, TIMEOUT, INTERNAL, DUPLICATE_TOPUP).
+> **Новые API:** `POST /v1/billing/topup` (dual idempotency: Redis + external_transaction_id), `POST /v1/billing/check` (can_afford), `GET /v1/meta/languages`.
+> **Errors:** `RateLimitedError` (429 + `Retry-After` header), `InvalidAmountError` (400). Error handler теперь locale-aware через `translate_error()`.
+> **Middleware:** `RequestIdMiddleware` расширен: language resolution из `Accept-Language` / `?lang=`, rate limit headers (`X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`).
+> **Dependencies:** `get_current_integration()` теперь делает per-integration RPM rate limit check через Redis sliding window.
+> **Jobs:** `Idempotency-Key` header → Redis cache (24h) → HTTP 200 при повторе. Per-user rate limit check (jobs/hour). `_build_job_response()` helper для DRY.
+> **Worker:** переделан на concurrent (asyncio.Semaphore), orphan recovery при старте (pending >60s → re-enqueue), recovery janitor loop (running > timeout+60s → failed + refund), webhook fire при succeeded/failed, webhook retry loop (каждые 10s).
+> **Repos:** `CreditTransactionRepo` — `external_transaction_id`, `get_by_external_txn_id()`, `get_latest_balances()`. `UserRepo` — `force_set_credits()`, `list_all()`. `IntegrationRepo.create()` — `webhook_url`/`webhook_secret`.
+> **Seed:** интеграция создаётся с `webhook_url` и `webhook_secret` для e2e тестирования.
+> **CLI:** `aimg reconcile-balances` — проверяет и исправляет расхождения балансов.
+> **Тесты:** unit (i18n 6, rate_limit 4, webhooks 4), functional (idempotency 3, rate_limit 2, billing_topup 6, webhooks_delivery 2, worker_recovery 2, localization 3), e2e (+5: idempotency, rate_limit, billing_topup_and_check, localization_ru, languages_endpoint).
+> **Dev-заметка:** `fakeredis` добавлен как dev-зависимость для unit тестов rate limiter. `import json` в billing routes для idempotency cache. Worker использует `asyncio.wait_for(shutdown_event.wait(), timeout=N)` вместо `asyncio.sleep()` для быстрого shutdown.
 
 ---
 

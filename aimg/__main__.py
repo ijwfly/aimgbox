@@ -3,7 +3,7 @@ import sys
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print("Usage: python -m aimg <api|worker|admin|seed|sync-job-types>")
+        print("Usage: python -m aimg <api|worker|admin|seed|sync-job-types|reconcile-balances>")
         sys.exit(1)
 
     command = sys.argv[1]
@@ -40,9 +40,13 @@ def main() -> None:
         from aimg.scripts.sync_job_types import main as sync_main
 
         sync_main()
+    elif command == "reconcile-balances":
+        from aimg.scripts.reconcile import main as reconcile_main
+
+        reconcile_main()
     else:
         print(f"Unknown command: {command}")
-        print("Usage: python -m aimg <api|worker|admin|seed|sync-job-types>")
+        print("Usage: python -m aimg <api|worker|admin|seed|sync-job-types|reconcile-balances>")
         sys.exit(1)
 
 

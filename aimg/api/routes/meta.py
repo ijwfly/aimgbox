@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 
 from aimg.api.dependencies import get_current_integration, get_db_pool
 from aimg.api.envelope import ApiResponse
+from aimg.common.i18n import SUPPORTED_LANGUAGES
 from aimg.common.logging import request_id_var
 from aimg.db.models import Integration
 from aimg.db.repos.job_types import JobTypeRepo
@@ -38,4 +39,14 @@ async def list_job_types(
         request_id=rid,
         success=True,
         data={"job_types": items},
+    ).model_dump(mode="json")
+
+
+@router.get("/languages")
+async def list_languages() -> dict:
+    rid = request_id_var.get() or ""
+    return ApiResponse(
+        request_id=rid,
+        success=True,
+        data={"languages": SUPPORTED_LANGUAGES},
     ).model_dump(mode="json")

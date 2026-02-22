@@ -20,13 +20,14 @@ class CreditTransactionRepo(BaseRepo):
         job_id: UUID | None = None,
         admin_user_id: UUID | None = None,
         comment: str | None = None,
+        external_transaction_id: str | None = None,
         conn: asyncpg.Connection | None = None,
     ) -> CreditTransaction:
         row = await self._fetchrow(
             """INSERT INTO credit_transactions
                (user_id, amount, credit_type, reason, balance_after,
-                job_id, admin_user_id, comment)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *""",
+                job_id, admin_user_id, comment, external_transaction_id)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *""",
             user_id,
             amount,
             credit_type,
@@ -35,6 +36,7 @@ class CreditTransactionRepo(BaseRepo):
             job_id,
             admin_user_id,
             comment,
+            external_transaction_id,
             conn=conn,
         )
         return CreditTransaction(**dict(row))
@@ -50,3 +52,31 @@ class CreditTransactionRepo(BaseRepo):
             conn=conn,
         )
         return [CreditTransaction(**dict(r)) for r in rows]
+
+    async def get_by_external_txn_id(
+        self,
+        user_id: UUID,
+        external_txn_id: str,
+        *,
+        conn: asyncpg.Connection | None = None,
+    ) -> CreditTransaction | None:
+        row = await self._fetchrow(
+            """SELECT * FROM credit_transactions
+               WHERE user_id = $1 AND external_transaction_id = $2""",
+            user_id,
+            external_txn_id,
+            conn=conn,
+        )
+        return CreditTransaction(**dict(row)) if row else None
+
+    async def get_latest_balances(
+        self, *, conn: asyncpg.Connection | None = None
+    ) -> list[dict]:
+        rows = await self._fetch(
+            """SELECT DISTINCT ON (user_id, credit_type)
+                      user_id, credit_type, balance_after
+               FROM credit_transactions
+               ORDER BY user_id, credit_type, created_at DESC""",
+            conn=conn,
+        )
+        return [dict(r) for r in rows]

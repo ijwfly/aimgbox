@@ -10,10 +10,12 @@ from aimg.common.encryption import decrypt_value
 from aimg.common.logging import configure_logging
 from aimg.common.settings import Settings
 from aimg.db.repos.files import FileRepo
+from aimg.db.repos.integrations import IntegrationRepo
 from aimg.db.repos.job_attempts import JobAttemptRepo
 from aimg.db.repos.job_types import JobTypeRepo
 from aimg.db.repos.jobs import JobRepo
 from aimg.db.repos.providers import ProviderRepo
+from aimg.db.repos.webhook_deliveries import WebhookDeliveryRepo
 from aimg.jobs.context import JobContext
 from aimg.jobs.fields import InputFile, OutputFile
 from aimg.jobs.registry import JobRegistry, discover_handlers
@@ -22,6 +24,7 @@ from aimg.providers.failing_mock import FailingMockProvider
 from aimg.providers.mock import MockProvider
 from aimg.providers.replicate import ReplicateAdapter
 from aimg.services.billing import refund_credits
+from aimg.services.webhooks import attempt_delivery, build_webhook_payload
 
 logger = structlog.get_logger()
 
@@ -32,6 +35,24 @@ PROVIDER_ADAPTERS: dict[str, type[ProviderAdapter]] = {
     "aimg.providers.replicate.ReplicateAdapter": ReplicateAdapter,
     "aimg.providers.failing_mock.FailingMockProvider": FailingMockProvider,
 }
+
+
+async def fire_webhook_if_configured(job, job_type, db_pool) -> None:
+    integration_repo = IntegrationRepo(db_pool)
+    integration = await integration_repo.get_by_id(job.integration_id)
+    if not integration or not integration.webhook_url:
+        return
+
+    wd_repo = WebhookDeliveryRepo(db_pool)
+    payload = build_webhook_payload(job, job_type)
+    delivery = await wd_repo.create(
+        integration_id=integration.id,
+        job_id=job.id,
+        event=payload["event"],
+        payload=payload,
+        next_retry_at=datetime.now(UTC),
+    )
+    await attempt_delivery(delivery, integration, wd_repo)
 
 
 async def process_job(
@@ -170,10 +191,17 @@ async def process_job(
         await _fail_job(
             db_pool, job_repo, job, "PROVIDER_ERROR", "All providers failed"
         )
+        # Fire webhook for failure
+        updated_job = await job_repo.get_by_id(job.id)
+        if updated_job:
+            await fire_webhook_if_configured(updated_job, job_type, db_pool)
         return
     except Exception as e:
         log.exception("handler_error")
         await _fail_job(db_pool, job_repo, job, "INTERNAL", str(e))
+        updated_job = await job_repo.get_by_id(job.id)
+        if updated_job:
+            await fire_webhook_if_configured(updated_job, job_type, db_pool)
         return
 
     # Upload OutputFile fields to S3 and create file records
@@ -225,6 +253,11 @@ async def process_job(
     )
     log.info("job_succeeded")
 
+    # Fire webhook for success
+    updated_job = await job_repo.get_by_id(job.id)
+    if updated_job:
+        await fire_webhook_if_configured(updated_job, job_type, db_pool)
+
 
 async def _fail_job(
     db_pool, job_repo: JobRepo, job, error_code: str, error_message: str
@@ -239,6 +272,84 @@ async def _fail_job(
                 error_message=error_message,
                 conn=conn,
             )
+
+
+async def recover_orphaned_jobs(db_pool, redis_client) -> None:
+    """Re-enqueue pending jobs that are older than 60 seconds (likely missed)."""
+    job_repo = JobRepo(db_pool)
+    rows = await job_repo._fetch(
+        """SELECT id FROM jobs
+           WHERE status = 'pending'
+           AND created_at < now() - interval '60 seconds'"""
+    )
+    for row in rows:
+        job_id = str(row["id"])
+        await redis_client.lpush(QUEUE_KEY, job_id)
+        logger.info("orphaned_job_requeued", job_id=job_id)
+    if rows:
+        logger.info("orphaned_jobs_recovered", count=len(rows))
+
+
+async def recovery_janitor_loop(db_pool, settings: Settings, shutdown_event: asyncio.Event) -> None:
+    """Periodically find stuck running jobs and fail them."""
+    job_repo = JobRepo(db_pool)
+    interval = settings.worker_recovery_interval
+
+    while not shutdown_event.is_set():
+        try:
+            await asyncio.wait_for(shutdown_event.wait(), timeout=interval)
+            break
+        except TimeoutError:
+            pass
+
+        try:
+            rows = await job_repo._fetch(
+                """SELECT j.* FROM jobs j
+                   JOIN job_types jt ON jt.id = j.job_type_id
+                   WHERE j.status = 'running'
+                   AND j.started_at < now() - make_interval(secs := jt.timeout_seconds + 60)"""
+            )
+            from aimg.db.models import Job
+
+            for row in rows:
+                job = Job(**dict(row))
+                logger.warning("stuck_job_detected", job_id=str(job.id))
+                await _fail_job(db_pool, job_repo, job, "TIMEOUT", "Job timed out")
+
+                # Load job type for webhook
+                jt_repo = JobTypeRepo(db_pool)
+                job_type = await jt_repo.get_by_id(job.job_type_id)
+                if job_type:
+                    updated_job = await job_repo.get_by_id(job.id)
+                    if updated_job:
+                        await fire_webhook_if_configured(updated_job, job_type, db_pool)
+
+            if rows:
+                logger.info("stuck_jobs_cleaned", count=len(rows))
+        except Exception:
+            logger.exception("recovery_janitor_error")
+
+
+async def webhook_retry_loop(db_pool, shutdown_event: asyncio.Event) -> None:
+    """Periodically retry pending webhook deliveries."""
+    wd_repo = WebhookDeliveryRepo(db_pool)
+    integration_repo = IntegrationRepo(db_pool)
+
+    while not shutdown_event.is_set():
+        try:
+            await asyncio.wait_for(shutdown_event.wait(), timeout=10)
+            break
+        except TimeoutError:
+            pass
+
+        try:
+            pending = await wd_repo.get_pending_retries(datetime.now(UTC), limit=50)
+            for delivery in pending:
+                integration = await integration_repo.get_by_id(delivery.integration_id)
+                if integration:
+                    await attempt_delivery(delivery, integration, wd_repo)
+        except Exception:
+            logger.exception("webhook_retry_error")
 
 
 async def run_worker() -> None:
@@ -270,6 +381,25 @@ async def run_worker() -> None:
         except Exception:
             await s3_client.create_bucket(Bucket=settings.s3_bucket)
 
+        # Recover orphaned jobs on startup
+        await recover_orphaned_jobs(db_pool, redis_client)
+
+        # Start background tasks
+        janitor_task = asyncio.create_task(
+            recovery_janitor_loop(db_pool, settings, shutdown_event)
+        )
+        webhook_task = asyncio.create_task(
+            webhook_retry_loop(db_pool, shutdown_event)
+        )
+
+        # Concurrent processing
+        semaphore = asyncio.Semaphore(settings.worker_concurrency)
+        running_tasks: set[asyncio.Task] = set()
+
+        async def process_with_semaphore(jid: UUID) -> None:
+            async with semaphore:
+                await process_job(jid, db_pool, redis_client, s3_client, settings)
+
         while not shutdown_event.is_set():
             try:
                 result = await redis_client.brpop(QUEUE_KEY, timeout=1)
@@ -278,12 +408,31 @@ async def run_worker() -> None:
                 _, job_id_str = result
                 job_id = UUID(job_id_str)
                 logger.info("job_dequeued", job_id=job_id_str)
-                await process_job(job_id, db_pool, redis_client, s3_client, settings)
+                task = asyncio.create_task(process_with_semaphore(job_id))
+                running_tasks.add(task)
+                task.add_done_callback(running_tasks.discard)
             except asyncio.CancelledError:
                 break
             except Exception:
                 logger.exception("worker_loop_error")
                 await asyncio.sleep(1)
+
+        # Graceful shutdown: await all running tasks
+        if running_tasks:
+            logger.info("waiting_for_running_tasks", count=len(running_tasks))
+            await asyncio.gather(*running_tasks, return_exceptions=True)
+
+        # Cancel background loops
+        janitor_task.cancel()
+        webhook_task.cancel()
+        try:
+            await janitor_task
+        except asyncio.CancelledError:
+            pass
+        try:
+            await webhook_task
+        except asyncio.CancelledError:
+            pass
 
     await db_pool.close()
     await redis_client.aclose()
