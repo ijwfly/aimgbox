@@ -105,11 +105,96 @@ The worker picks up the job automatically. Mock provider returns results immedia
 | Redis | 6379 | Queue, cache, sessions |
 | MinIO | 9000 | S3-compatible storage |
 
-## Development
+## Testing
+
+Three уровня тестов, от быстрых до полных.
+
+### Unit-тесты (73 теста)
+
+Не требуют инфраструктуры. Используют моки и fakeredis.
 
 ```bash
-uv sync                              # Install dependencies
-uv run pytest tests/unit/            # Unit tests (no infra needed)
-uv run pytest tests/functional/      # Functional tests (needs postgres, redis, minio)
-uv run ruff check .                  # Lint
+uv sync                       # установить зависимости (один раз)
+uv run pytest tests/unit/ -v  # запуск
+```
+
+### Functional-тесты
+
+Требуют запущенные postgres, redis, minio (без API/worker/admin).
+
+```bash
+docker-compose up -d postgres redis minio  # только инфра
+uv run pytest tests/functional/ -v
+```
+
+### E2E-тесты (30 тестов)
+
+Полный стек: API + Worker + Admin + все зависимости. Тесты ходят по HTTP в реальные контейнеры.
+
+#### 1. Поднять стек
+
+```bash
+docker-compose up -d --build
+```
+
+Дождаться готовности (API на `:8010`, Admin на `:8001`).
+
+#### 2. Seed + sync
+
+```bash
+docker-compose exec api uv run python -m aimg seed
+docker-compose exec api uv run python -m aimg sync-job-types
+```
+
+Seed выведет JWT-токен — скопировать его.
+
+#### 3. Запустить тесты
+
+```bash
+AIMG_API_KEY=<JWT_TOKEN> uv run pytest tests/e2e/ -v
+```
+
+#### Переменные окружения
+
+| Переменная | По умолчанию | Описание |
+|------------|--------------|----------|
+| `AIMG_API_KEY` | — (обязательна) | JWT-токен из `aimg seed` |
+| `AIMG_API_URL` | `http://localhost:8010` | URL API-сервера |
+| `AIMG_ADMIN_URL` | `http://localhost:8001` | URL админки |
+| `AIMG_DB_HOST` | `localhost` | Хост PostgreSQL |
+| `AIMG_DB_PORT` | `5433` | Порт PostgreSQL |
+| `AIMG_DB_NAME` | `aimg` | Имя БД |
+| `AIMG_DB_USER` | `aimg` | Пользователь БД |
+| `AIMG_DB_PASSWORD` | `aimg` | Пароль БД |
+
+#### Что покрывают E2E-тесты
+
+**API (test_flow.py):**
+- Upload → job → poll → succeeded (AC 1-3)
+- GET /v1/jobs/{id}/result → presigned URL (AC 4)
+- Credit lifecycle: reserve, unchanged on success, refund on failure (AC 5-7, 9)
+- 402 insufficient credits (AC 8)
+- Billing topup (AC 10)
+- Idempotency: same result, no double-charge (AC 11-12)
+- Provider fallback (AC 13), all providers failed → failed (AC 14)
+- Webhooks: delivery, payload structure, retry (AC 15-17)
+- Rate limit 429 + Retry-After (AC 24)
+- i18n: RU/EN error messages (AC 25-26)
+
+**Admin (test_admin.py):**
+- Create partner/integration (AC 18)
+- Generate/revoke API keys (AC 19)
+- View jobs + filters (AC 20)
+- Credit adjustment with comment (AC 21)
+- CSV export (AC 22)
+- Audit log (AC 23)
+
+#### При повторном запуске
+
+Seed идемпотентен — можно запускать повторно. Тесты используют уникальные user ID (uuid4), поэтому не конфликтуют между запусками.
+
+### Lint
+
+```bash
+uv run ruff check .
 ```

@@ -29,11 +29,14 @@ async def run_seed() -> None:
         partner = await partner_repo.create("Test Partner")
         print(f"Partner: {partner.id} ({partner.name})")
 
-        # Create integration
+        # Create integration with high RPM for E2E testing
         integration = await integration_repo.create(
             partner.id, "Test Integration", default_free_credits=10,
             webhook_url="http://localhost:8888/webhook",
             webhook_secret="test-webhook-secret",
+        )
+        await integration_repo.update(
+            integration.id, rate_limit_rpm=600,
         )
         print(f"Integration: {integration.id} ({integration.name})")
 
@@ -53,13 +56,20 @@ async def run_seed() -> None:
         print(f"API Key ID: {api_key.id}")
         print(f"JWT Token: {token}")
 
-        # Create mock provider
-        provider = await provider_repo.create(
-            slug="mock",
-            name="Mock Provider",
-            adapter_class="aimg.providers.mock.MockProvider",
-            api_key_encrypted="not-needed",
-        )
+        # Create mock provider (idempotent)
+        provider = await provider_repo.get_by_slug("mock")
+        if not provider:
+            provider = await provider_repo.create(
+                slug="mock",
+                name="Mock Provider",
+                adapter_class="aimg.providers.mock.MockProvider",
+                api_key_encrypted="not-needed",
+            )
+        else:
+            # Ensure adapter_class is correct (may be stale from older seed)
+            await provider_repo.update(
+                provider.id, adapter_class="aimg.providers.mock.MockProvider",
+            )
         print(f"Provider: {provider.id} ({provider.slug})")
 
         # Create remove_bg job type
@@ -96,12 +106,14 @@ async def run_seed() -> None:
             replicate_key_enc = "not-needed"
             print("WARNING: REPLICATE_API_TOKEN not set, using placeholder")
 
-        replicate_provider = await provider_repo.create(
-            slug="replicate",
-            name="Replicate",
-            adapter_class="aimg.providers.replicate.ReplicateAdapter",
-            api_key_encrypted=replicate_key_enc,
-        )
+        replicate_provider = await provider_repo.get_by_slug("replicate")
+        if not replicate_provider:
+            replicate_provider = await provider_repo.create(
+                slug="replicate",
+                name="Replicate",
+                adapter_class="aimg.providers.replicate.ReplicateAdapter",
+                api_key_encrypted=replicate_key_enc,
+            )
         print(f"Provider: {replicate_provider.id} ({replicate_provider.slug})")
 
         # Create txt2img job type
@@ -158,6 +170,47 @@ async def run_seed() -> None:
         )
         await jt_repo.add_provider(txt2img_type.id, provider.id, priority=1)
         print(f"Linked providers to {txt2img_type.slug}: replicate(0), mock(1)")
+
+        # Create failing_mock provider (for test_allfail handler, idempotent)
+        failing_provider = await provider_repo.get_by_slug("failing_mock")
+        if not failing_provider:
+            failing_provider = await provider_repo.create(
+                slug="failing_mock",
+                name="Failing Mock Provider",
+                adapter_class="aimg.providers.failing_mock.FailingMockProvider",
+                api_key_encrypted="not-needed",
+            )
+        print(f"Provider: {failing_provider.id} ({failing_provider.slug})")
+
+        # Create test_allfail job type
+        test_allfail_type = await jt_repo.upsert(
+            slug="test_allfail",
+            name="Test All Fail",
+            description="Test handler where all providers intentionally fail",
+            input_schema={
+                "type": "object",
+                "required": ["image"],
+                "properties": {
+                    "image": {"type": "string", "format": "uuid"},
+                    "output_format": {
+                        "type": "string",
+                        "enum": ["png", "webp"],
+                        "default": "png",
+                    },
+                },
+            },
+            output_schema={
+                "type": "object",
+                "properties": {
+                    "image": {"type": "string", "format": "uuid"},
+                },
+            },
+        )
+        print(f"Job Type: {test_allfail_type.id} ({test_allfail_type.slug})")
+
+        # Link failing_mock to test_allfail (only failing provider)
+        await jt_repo.add_provider(test_allfail_type.id, failing_provider.id, priority=0)
+        print(f"Linked providers to {test_allfail_type.slug}: failing_mock(0)")
 
         # Create admin user
         admin_repo = AdminUserRepo(db_pool)

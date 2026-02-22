@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
@@ -9,7 +10,13 @@ import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, Header, Request, Response
 from pydantic import BaseModel
 
-from aimg.api.dependencies import get_current_user, get_db_pool, get_redis, get_settings
+from aimg.api.dependencies import (
+    get_current_user,
+    get_db_pool,
+    get_redis,
+    get_s3_client,
+    get_settings,
+)
 from aimg.api.envelope import ApiResponse
 from aimg.api.errors import (
     ForbiddenError,
@@ -200,4 +207,56 @@ async def get_job(
         request_id=rid,
         success=True,
         data=data,
+    ).model_dump(mode="json")
+
+
+@router.get("/{job_id}/result")
+async def get_job_result(
+    job_id: UUID,
+    user: User = Depends(get_current_user),
+    db_pool: asyncpg.Pool = Depends(get_db_pool),
+    s3_client: object = Depends(get_s3_client),
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    job_repo = JobRepo(db_pool)
+    job = await job_repo.get_by_id(job_id)
+    if not job:
+        raise NotFoundError("Job not found")
+    if job.integration_id != user.integration_id:
+        raise ForbiddenError("Access denied to this job")
+    if job.status != "succeeded":
+        raise InvalidInputError(
+            "Job has not succeeded yet",
+            details={"status": job.status},
+        )
+
+    output = job.output_data or {}
+    file_id_str = output.get("image")
+    if not file_id_str:
+        raise NotFoundError("No output file found")
+
+    file_repo = FileRepo(db_pool)
+    file_record = await file_repo.get_by_id(UUID(file_id_str))
+    if not file_record:
+        raise NotFoundError("Output file not found")
+
+    download_url = await s3_client.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": file_record.s3_bucket, "Key": file_record.s3_key},
+        ExpiresIn=settings.s3_presign_ttl,
+    )
+    expires_at = datetime.now(UTC) + timedelta(seconds=settings.s3_presign_ttl)
+
+    rid = request_id_var.get() or ""
+    return ApiResponse(
+        request_id=rid,
+        success=True,
+        data={
+            "job_id": str(job.id),
+            "file_id": file_id_str,
+            "download_url": download_url,
+            "content_type": file_record.content_type,
+            "size_bytes": file_record.size_bytes,
+            "expires_at": expires_at.isoformat(),
+        },
     ).model_dump(mode="json")
