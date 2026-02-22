@@ -1,16 +1,18 @@
 import argparse
 import asyncio
+import os
 import sys
 
+import asyncpg
+
 from aimg.admin.auth import hash_password
-from aimg.common.connections import create_db_pool
-from aimg.common.settings import Settings
 from aimg.db.repos.admin_users import AdminUserRepo
 
+DEFAULT_DSN = "postgresql://aimg:aimg@localhost:5432/aimg"
 
-async def run_create_admin(username: str, password: str, role: str) -> None:
-    settings = Settings()
-    db_pool = await create_db_pool(settings)
+
+async def run_create_admin(dsn: str, username: str, password: str, role: str) -> None:
+    db_pool = await asyncpg.create_pool(dsn=dsn)
 
     try:
         repo = AdminUserRepo(db_pool)
@@ -31,6 +33,8 @@ def main() -> None:
     parser.add_argument("--username", required=True)
     parser.add_argument("--password", required=True)
     parser.add_argument("--role", default="admin", choices=["super_admin", "admin", "viewer"])
+    parser.add_argument("--database-url", default=None, help="PostgreSQL DSN")
     args = parser.parse_args(sys.argv[2:])
 
-    asyncio.run(run_create_admin(args.username, args.password, args.role))
+    dsn = args.database_url or os.environ.get("AIMG_DATABASE_URL", DEFAULT_DSN)
+    asyncio.run(run_create_admin(dsn, args.username, args.password, args.role))
