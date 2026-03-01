@@ -114,6 +114,12 @@ async def run_seed() -> None:
                 adapter_class="aimg.providers.replicate.ReplicateAdapter",
                 api_key_encrypted=replicate_key_enc,
             )
+        else:
+            await provider_repo.update(
+                replicate_provider.id,
+                adapter_class="aimg.providers.replicate.ReplicateAdapter",
+                api_key_encrypted=replicate_key_enc,
+            )
         print(f"Provider: {replicate_provider.id} ({replicate_provider.slug})")
 
         # Create txt2img job type
@@ -145,20 +151,26 @@ async def run_seed() -> None:
         )
         print(f"Job Type: {txt2img_type.id} ({txt2img_type.slug})")
 
-        # Link Replicate to remove_bg (priority 0) + mock as fallback (priority 1)
+        # Link Replicate to remove_bg
         await jt_repo.add_provider(
             job_type.id,
             replicate_provider.id,
             priority=0,
             config_override={
-                "model": "cjwbw/rembg",
-                "version": "fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003",
+                "model": "851-labs/background-remover",
+                "version": "a029dff38972b5fda4ec5d75d7d1cd25aeff621d2cf4946a41055d7db66b80bc",
+                "sync_mode": True,
+                "exclude_params": ["output_format"],
             },
         )
-        await jt_repo.add_provider(job_type.id, provider.id, priority=1)
-        print(f"Linked providers to {job_type.slug}: replicate(0), mock(1)")
+        # Mock fallback only when no real Replicate token (dev/E2E)
+        if not replicate_token:
+            await jt_repo.add_provider(job_type.id, provider.id, priority=1)
+            print(f"Linked providers to {job_type.slug}: replicate(0), mock(1)")
+        else:
+            print(f"Linked providers to {job_type.slug}: replicate(0)")
 
-        # Link Replicate to txt2img (priority 0) + mock as fallback (priority 1)
+        # Link Replicate to txt2img
         await jt_repo.add_provider(
             txt2img_type.id,
             replicate_provider.id,
@@ -168,8 +180,57 @@ async def run_seed() -> None:
                 "version": "7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc",
             },
         )
-        await jt_repo.add_provider(txt2img_type.id, provider.id, priority=1)
-        print(f"Linked providers to {txt2img_type.slug}: replicate(0), mock(1)")
+        if not replicate_token:
+            await jt_repo.add_provider(txt2img_type.id, provider.id, priority=1)
+            print(f"Linked providers to {txt2img_type.slug}: replicate(0), mock(1)")
+        else:
+            print(f"Linked providers to {txt2img_type.slug}: replicate(0)")
+
+        # Create img2img job type
+        img2img_type = await jt_repo.upsert(
+            slug="img2img",
+            name="Image to Image",
+            description="Edits an image based on a text prompt using AI",
+            input_schema={
+                "type": "object",
+                "required": ["image", "prompt"],
+                "properties": {
+                    "image": {"type": "string", "format": "uuid"},
+                    "prompt": {"type": "string", "minLength": 1, "maxLength": 2000},
+                    "output_format": {
+                        "type": "string",
+                        "enum": ["png", "webp", "jpg"],
+                        "default": "png",
+                    },
+                },
+            },
+            output_schema={
+                "type": "object",
+                "properties": {
+                    "image": {"type": "string", "format": "uuid"},
+                },
+            },
+        )
+        print(f"Job Type: {img2img_type.id} ({img2img_type.slug})")
+
+        # Link Replicate to img2img
+        await jt_repo.add_provider(
+            img2img_type.id,
+            replicate_provider.id,
+            priority=0,
+            config_override={
+                "model": "prunaai/p-image-edit",
+                "input_field": "images",
+                "input_as_array": True,
+                "exclude_params": ["output_format"],
+                "default_params": {"aspect_ratio": "match_input_image"},
+            },
+        )
+        if not replicate_token:
+            await jt_repo.add_provider(img2img_type.id, provider.id, priority=1)
+            print(f"Linked providers to {img2img_type.slug}: replicate(0), mock(1)")
+        else:
+            print(f"Linked providers to {img2img_type.slug}: replicate(0)")
 
         # Create failing_mock provider (for test_allfail handler, idempotent)
         failing_provider = await provider_repo.get_by_slug("failing_mock")

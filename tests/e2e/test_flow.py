@@ -107,6 +107,7 @@ def test_meta_job_types(client, api_key):
     slugs = [jt["slug"] for jt in resp.json()["data"]["job_types"]]
     assert "remove_bg" in slugs
     assert "txt2img" in slugs
+    assert "img2img" in slugs
 
 
 def test_user_balance(client, api_key):
@@ -155,6 +156,27 @@ def test_txt2img_flow(client, api_key):
     code, data = _create_job(
         client, headers, "txt2img",
         {"prompt": "a beautiful sunset over mountains"},
+    )
+    assert code == 201, data
+    job_id = data["data"]["job_id"]
+
+    result = _poll_job(client, job_id, headers)
+    assert result["status"] == "succeeded"
+    assert result["output"] is not None
+
+
+def test_img2img_flow(client, api_key):
+    """Upload image -> create img2img job with prompt -> poll -> succeeded."""
+    headers = {
+        "X-API-Key": api_key,
+        "X-External-User-Id": f"e2e-img2img-{uuid.uuid4().hex[:8]}",
+    }
+
+    file_id = _upload_file(client, headers)
+
+    code, data = _create_job(
+        client, headers, "img2img",
+        {"image": file_id, "prompt": "make it look like a watercolor painting"},
     )
     assert code == 201, data
     job_id = data["data"]["job_id"]
