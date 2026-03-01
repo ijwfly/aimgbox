@@ -42,6 +42,14 @@ services:
       timeout: 3s
       retries: 5
 
+  migrate:
+    build: .
+    command: migrate
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   api:
     build: .
     command: api
@@ -49,8 +57,8 @@ services:
       - "8010:8000"
     env_file: .env
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       minio:
@@ -66,8 +74,8 @@ services:
     command: worker
     env_file: .env
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       minio:
@@ -80,8 +88,8 @@ services:
       - "8001:8001"
     env_file: .env
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
 

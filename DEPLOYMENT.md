@@ -1,157 +1,121 @@
-# AIMG — Server Setup Guide
+# AIMG — Deployment Guide
 
-## Prerequisites
+## Quick Start (docker-compose)
 
-- Python 3.12+ with [uv](https://docs.astral.sh/uv/)
-- PostgreSQL 16+
-- Redis 7+
-- S3-compatible storage (AWS S3 or MinIO)
-- [Replicate](https://replicate.com) account with API token
-
-## 1. Environment Variables
-
-Create `.env` (or set in your environment / systemd / docker):
+### 1. Configure `.env`
 
 ```bash
-# Database
-AIMG_DATABASE_URL=postgresql://aimg:STRONG_PASSWORD@db-host:5432/aimg
+cp .env .env  # уже есть шаблон, заполни значения
+```
 
-# Redis
-AIMG_REDIS_URL=redis://redis-host:6379/0
+Обязательные переменные:
 
-# S3
-AIMG_S3_ENDPOINT=https://s3.amazonaws.com   # or MinIO URL
-AIMG_S3_ACCESS_KEY=your-s3-access-key
-AIMG_S3_SECRET_KEY=your-s3-secret-key
+```bash
+AIMG_DATABASE_URL=postgresql://aimg:aimg@postgres:5432/aimg
+AIMG_REDIS_URL=redis://redis:6379/0
+AIMG_S3_ENDPOINT=http://minio:9000
+AIMG_S3_ACCESS_KEY=minioadmin
+AIMG_S3_SECRET_KEY=minioadmin
 AIMG_S3_BUCKET=aimg
-
-# Auth — generate strong random values
-AIMG_JWT_SECRET=$(openssl rand -base64 32)
-AIMG_ENCRYPTION_KEY=$(openssl rand -base64 32)
-AIMG_ADMIN_SESSION_SECRET=$(openssl rand -base64 32)
-
-# Replicate (needed for migration 004)
+AIMG_JWT_SECRET=<сгенерируй: openssl rand -base64 32>
+AIMG_ENCRYPTION_KEY=<сгенерируй: openssl rand -base64 32>
+AIMG_ADMIN_SESSION_SECRET=<сгенерируй: openssl rand -base64 32>
 REPLICATE_API_TOKEN=r8_your_token_here
-
-# Optional
-AIMG_LOG_LEVEL=INFO
-AIMG_WORKER_CONCURRENCY=5
 ```
 
-## 2. Install Dependencies
+> `REPLICATE_API_TOKEN` нужен при первом запуске — миграция 004 шифрует его и сохраняет в БД. После этого переменная больше не нужна.
+
+### 2. Запуск
 
 ```bash
-uv sync --no-dev    # production deps only
+docker-compose up -d --build
 ```
 
-## 3. Create Database
+Это автоматически:
+1. Поднимет postgres, redis, minio
+2. Запустит `migrate` — создаст таблицы, провайдеров, job types
+3. После миграции запустит `api`, `worker`, `admin`
+
+### 3. Создание админа
 
 ```bash
-createdb aimg
-# or via psql:
-psql -c "CREATE DATABASE aimg"
-```
-
-## 4. Run Migrations
-
-This creates all tables AND seeds providers + job types:
-
-```bash
-uv run alembic upgrade head
-```
-
-Migration 004 automatically:
-- Creates `replicate`, `mock`, `failing_mock` providers
-- Creates `remove_bg`, `txt2img`, `img2img`, `test_allfail` job types
-- Links Replicate provider to all job types with correct model configs
-- Encrypts the Replicate API token using `AIMG_ENCRYPTION_KEY`
-
-> If you forgot `REPLICATE_API_TOKEN` during migration, update manually:
-> ```bash
-> uv run python -c "
-> from aimg.common.encryption import encrypt_value
-> import os
-> print(encrypt_value(os.environ['REPLICATE_API_TOKEN'], os.environ['AIMG_ENCRYPTION_KEY']))
-> "
-> # Then in psql:
-> UPDATE providers SET api_key_encrypted='<output>' WHERE slug='replicate';
-> ```
-
-## 5. Create Admin User
-
-```bash
-uv run python -m aimg create-admin \
+docker-compose run --rm api create-admin \
     --username admin \
-    --password YOUR_STRONG_PASSWORD \
+    --password STRONG_PASSWORD \
     --role super_admin
 ```
 
-## 6. Create Partner + Integration + API Key
-
-Use the admin panel or seed script:
+### 4. Создание партнёра + API ключа
 
 ```bash
-uv run python -m aimg seed
+docker-compose run --rm api seed
 ```
 
-This creates a test partner, integration (10 free credits), and prints the JWT API key.
+Выведет JWT токен для API. Для прода — создавай партнёров через админку.
 
-For production, create partners/integrations via the admin panel at `http://host:8001/admin/`.
-
-## 7. Start Services
-
-Three processes need to run:
-
-```bash
-# API server (default port 8000)
-uv run python -m aimg api
-
-# Background worker (processes jobs via Replicate)
-uv run python -m aimg worker
-
-# Admin panel (default port 8001)
-uv run python -m aimg admin
-```
-
-With systemd, create a unit file for each. Example for API:
-
-```ini
-[Unit]
-Description=AIMG API
-After=postgresql.service redis.service
-
-[Service]
-Type=simple
-User=aimg
-WorkingDirectory=/opt/aimg
-EnvironmentFile=/opt/aimg/.env
-ExecStart=/opt/aimg/.venv/bin/python -m aimg api
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-## 8. Verify
+### 5. Проверка
 
 ```bash
 # Health check
-curl http://localhost:8000/health
+curl http://localhost:8010/health
 
-# Should return:
-# {"status":"ok","version":"1.0.0","dependencies":{"database":"ok","redis":"ok","storage":"ok"}}
+# Job types
+curl http://localhost:8010/v1/meta/job-types \
+  -H "X-API-Key: <JWT>"
 ```
 
-## Quick Reference
+## Сервисы
 
-| Service | Default Port | Command |
-|---------|-------------|---------|
-| API     | 8000        | `python -m aimg api` |
-| Worker  | —           | `python -m aimg worker` |
-| Admin   | 8001        | `python -m aimg admin` |
-
-| Job Type | Model | Endpoint |
+| Сервис   | Порт  | Описание |
 |----------|-------|----------|
-| `remove_bg` | `851-labs/background-remover` | version-based, sync mode |
-| `txt2img` | `stability-ai/sdxl` | version-based |
-| `img2img` | `prunaai/p-image-edit` | model-based |
+| api      | 8010  | REST API |
+| worker   | —     | Обработка jobs через Replicate |
+| admin    | 8001  | Админ-панель |
+| postgres | 5433  | БД (хост-порт) |
+| redis    | 6379  | Очередь + кэш |
+| minio    | 9000/9001 | S3 хранилище / консоль |
+
+## Job Types
+
+| Slug | Модель | Описание |
+|------|--------|----------|
+| `remove_bg` | `851-labs/background-remover` | Удаление фона (sync mode, ~3s) |
+| `txt2img` | `stability-ai/sdxl` | Генерация из текста (~12s) |
+| `img2img` | `prunaai/p-image-edit` | Редактирование по промпту (~6s) |
+
+## Обновление
+
+```bash
+git pull
+docker-compose up -d --build
+```
+
+Миграции запускаются автоматически при каждом старте (сервис `migrate`). Alembic идемпотентен — повторный запуск ничего не сломает.
+
+## Обновление Replicate токена
+
+Если нужно сменить токен без пересоздания БД:
+
+```bash
+docker-compose run --rm api python -c "
+from aimg.common.encryption import encrypt_value
+import os
+print(encrypt_value(
+    os.environ['REPLICATE_API_TOKEN'],
+    os.environ['AIMG_ENCRYPTION_KEY'],
+))
+"
+```
+
+Затем в psql:
+```sql
+UPDATE providers SET api_key_encrypted='<output>' WHERE slug='replicate';
+```
+
+## Логи
+
+```bash
+docker-compose logs -f worker    # логи воркера
+docker-compose logs -f api       # логи API
+docker-compose logs -f migrate   # результат миграции
+```

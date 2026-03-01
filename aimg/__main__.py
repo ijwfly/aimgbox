@@ -2,7 +2,7 @@ import sys
 
 USAGE = (
     "Usage: python -m aimg "
-    "<api|worker|admin|seed|sync-job-types|reconcile-balances|create-admin>"
+    "<api|worker|admin|migrate|seed|sync-job-types|reconcile-balances|create-admin>"
 )
 
 
@@ -37,6 +37,13 @@ def main() -> None:
             port=8001,
             log_level="info",
         )
+    elif command == "migrate":
+        from alembic.config import Config
+
+        from alembic import command as alembic_cmd
+
+        alembic_cfg = Config("alembic.ini")
+        alembic_cmd.upgrade(alembic_cfg, "head")
     elif command == "seed":
         from aimg.scripts.seed import main as seed_main
 
