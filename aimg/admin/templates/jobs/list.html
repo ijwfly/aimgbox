@@ -3,7 +3,12 @@
 {% block content %}
 <div style="display:flex;justify-content:space-between;align-items:center;">
     <h3>Jobs</h3>
-    <a href="/admin/jobs/export?{{ request.query_params }}" role="button" class="outline">Export CSV</a>
+    <div style="display:flex;gap:0.5rem;">
+        {% if admin_user.role in ('super_admin', 'admin') %}
+        <a href="/admin/test-jobs" role="button">Run Test Job</a>
+        {% endif %}
+        <a href="/admin/jobs/export?{{ request.query_params }}" role="button" class="outline">Export CSV</a>
+    </div>
 </div>
 
 <details>

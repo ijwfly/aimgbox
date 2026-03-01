@@ -42,6 +42,9 @@
             <li><a href="/admin/users">Users</a></li>
             <li><a href="/admin/jobs">Jobs</a></li>
             {% if admin_user.role in ('super_admin', 'admin') %}
+            <li><a href="/admin/test-jobs">Test Job</a></li>
+            {% endif %}
+            {% if admin_user.role in ('super_admin', 'admin') %}
             <li><a href="/admin/job-types">Job Types</a></li>
             <li><a href="/admin/providers">Providers</a></li>
             {% endif %}

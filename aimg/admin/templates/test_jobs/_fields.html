@@ -1,0 +1,28 @@
+{% for field in fields %}
+<label for="{{ field.name }}">{{ field.label }}{% if field.required %} *{% endif %}</label>
+{% if field.type == "file" %}
+    <input type="file" id="{{ field.name }}" name="{{ field.name }}"
+           accept="image/png,image/jpeg,image/webp"
+           {{ 'required' if field.required else '' }}>
+{% elif field.type == "select" %}
+    <select id="{{ field.name }}" name="{{ field.name }}">
+        {% for opt in field.options %}
+        <option value="{{ opt }}" {{ 'selected' if opt == field.default else '' }}>{{ opt }}</option>
+        {% endfor %}
+    </select>
+{% elif field.type == "textarea" %}
+    <textarea id="{{ field.name }}" name="{{ field.name }}"
+              {{ 'required' if field.required else '' }}
+              rows="3"
+              placeholder="Enter {{ field.label|lower }}...">{{ field.default|default('', true) }}</textarea>
+{% elif field.type == "number" %}
+    <input type="number" id="{{ field.name }}" name="{{ field.name }}"
+           value="{{ field.default|default('', true) }}"
+           {% if field.min is not none %}min="{{ field.min }}"{% endif %}
+           {% if field.max is not none %}max="{{ field.max }}"{% endif %}>
+{% else %}
+    <input type="text" id="{{ field.name }}" name="{{ field.name }}"
+           value="{{ field.default|default('', true) }}"
+           {{ 'required' if field.required else '' }}>
+{% endif %}
+{% endfor %}

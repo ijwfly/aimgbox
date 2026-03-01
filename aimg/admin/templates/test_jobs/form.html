@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Run Test Job - AIMG Admin{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ul>
+        <li><a href="/admin/jobs">Jobs</a></li>
+        <li>Run Test Job</li>
+    </ul>
+</nav>
+
+<h3>Run Test Job</h3>
+<p class="text-muted">Runs a job through the real API with full auth, billing, and rate limits.</p>
+
+{% if error %}
+<div class="flash flash-error">{{ error }}</div>
+{% endif %}
+
+<article style="max-width:600px;">
+    <form method="post" action="/admin/test-jobs" enctype="multipart/form-data">
+        <label for="api_key">API Key (JWT)</label>
+        <input type="text" id="api_key" name="api_key" required
+               placeholder="eyJhbGciOiJIUzI1NiIs..."
+               value="{{ api_key|default('', true) }}">
+
+        <label for="external_user_id">External User ID</label>
+        <input type="text" id="external_user_id" name="external_user_id" required
+               placeholder="user-123"
+               value="{{ external_user_id|default('', true) }}">
+
+        <label for="job_type">Job Type</label>
+        <select id="job_type" name="job_type" required
+                hx-get="/admin/test-jobs/fields"
+                hx-target="#dynamic-fields"
+                hx-trigger="change"
+                hx-include="this">
+            <option value="">Select job type...</option>
+            {% for jt in job_types %}
+            <option value="{{ jt.slug }}">{{ jt.name }} ({{ jt.slug }})</option>
+            {% endfor %}
+        </select>
+
+        <div id="dynamic-fields">
+            <!-- Populated by htmx when job type is selected -->
+        </div>
+
+        <button type="submit">Run Job</button>
+    </form>
+</article>
+{% endblock %}

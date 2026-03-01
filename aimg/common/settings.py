@@ -37,3 +37,4 @@ class Settings(BaseSettings):
     # Admin
     admin_session_secret: str
     admin_port: int = 8001
+    api_internal_url: str = "http://localhost:8000"

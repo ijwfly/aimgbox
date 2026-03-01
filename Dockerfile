@@ -10,4 +10,4 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY . .
 RUN uv sync --frozen --no-dev
 
-ENTRYPOINT ["uv", "run", "python", "-m", "aimg"]
+ENTRYPOINT ["uv", "run", "--no-dev", "python", "-m", "aimg"]

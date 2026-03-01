@@ -38,6 +38,17 @@
 <pre style="background:#f4f4f4;padding:1rem;overflow-x:auto;">{{ job.output_data }}</pre>
 {% endif %}
 
+{% if result_url %}
+<h5>Result</h5>
+<article>
+    <div style="margin-bottom:1rem;">
+        <img src="{{ result_url }}" alt="Result" style="max-width:100%;max-height:500px;border-radius:8px;">
+    </div>
+    <a href="{{ result_url }}" target="_blank" role="button">Download Result</a>
+    <p class="text-muted" style="margin-top:0.5rem;">Presigned URL expires in ~1 hour</p>
+</article>
+{% endif %}
+
 {% if attempts %}
 <h5>Attempts</h5>
 <table>

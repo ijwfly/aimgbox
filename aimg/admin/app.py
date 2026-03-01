@@ -44,8 +44,14 @@ from aimg.admin.routes.providers import (
     provider_new,
     provider_update,
 )
+from aimg.admin.routes.test_jobs import (
+    test_job_create,
+    test_job_fields,
+    test_job_form,
+    test_job_poll,
+)
 from aimg.admin.routes.users import user_credit_adjust, user_detail, user_list
-from aimg.common.connections import create_db_pool, create_redis_client
+from aimg.common.connections import create_db_pool, create_redis_client, create_s3_client
 from aimg.common.settings import Settings
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
@@ -56,7 +62,11 @@ async def lifespan(app: Starlette):
     settings = app.state.settings
     app.state.db_pool = await create_db_pool(settings)
     app.state.redis = create_redis_client(settings)
+    s3_cm = create_s3_client(settings)
+    app.state.s3_client = await s3_cm.__aenter__()
+    app.state._s3_cm = s3_cm
     yield
+    await app.state._s3_cm.__aexit__(None, None, None)
     await app.state.db_pool.close()
     await app.state.redis.aclose()
 
@@ -112,6 +122,12 @@ def create_admin_app(settings: Settings | None = None) -> Starlette:
         Route("/admin/jobs", job_list, methods=["GET"]),
         Route("/admin/jobs/export", job_export, methods=["GET"]),
         Route("/admin/jobs/{id:uuid}", job_detail, methods=["GET"]),
+
+        # Test Jobs
+        Route("/admin/test-jobs", test_job_form, methods=["GET"]),
+        Route("/admin/test-jobs", test_job_create, methods=["POST"]),
+        Route("/admin/test-jobs/fields", test_job_fields, methods=["GET"]),
+        Route("/admin/test-jobs/poll/{job_id}", test_job_poll, methods=["GET"]),
 
         # Job Types
         Route("/admin/job-types", job_type_list, methods=["GET"]),

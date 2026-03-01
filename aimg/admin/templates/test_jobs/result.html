@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Test Job: {{ job_id }} - AIMG Admin{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ul>
+        <li><a href="/admin/jobs">Jobs</a></li>
+        <li><a href="/admin/test-jobs">Test Job</a></li>
+        <li>{{ job_id[:12] }}...</li>
+    </ul>
+</nav>
+
+<h3>Test Job Result</h3>
+
+<div id="poll-container">
+{% include "test_jobs/_poll_partial.html" %}
+</div>
+
+<div style="margin-top:1rem;">
+    <a href="/admin/test-jobs" role="button" class="outline">Run Another Job</a>
+    <a href="/admin/jobs/{{ job_id }}" role="button" class="outline secondary">View Full Details</a>
+</div>
+{% endblock %}

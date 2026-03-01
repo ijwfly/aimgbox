@@ -8,6 +8,7 @@ from starlette.requests import Request
 from aimg.admin.csv_export import export_jobs_csv
 from aimg.admin.decorators import require_auth
 from aimg.admin.pagination import get_page_info
+from aimg.db.repos.files import FileRepo
 from aimg.db.repos.job_attempts import JobAttemptRepo
 from aimg.db.repos.jobs import JobRepo
 
@@ -74,8 +75,27 @@ async def job_detail(request: Request):
     attempt_repo = JobAttemptRepo(db_pool)
     attempts = await attempt_repo.list_by_job(job_id)
 
+    # Generate presigned result URL for succeeded jobs
+    result_url = None
+    if job.status == "succeeded" and job.output_data:
+        file_id_str = job.output_data.get("image")
+        if file_id_str:
+            file_repo = FileRepo(db_pool)
+            file_record = await file_repo.get_by_id(UUID(file_id_str))
+            if file_record:
+                s3_client = request.app.state.s3_client
+                settings = request.app.state.settings
+                result_url = await s3_client.generate_presigned_url(
+                    "get_object",
+                    Params={
+                        "Bucket": file_record.s3_bucket,
+                        "Key": file_record.s3_key,
+                    },
+                    ExpiresIn=settings.s3_presign_ttl,
+                )
+
     return templates.TemplateResponse(request, "jobs/detail.html", {
-        "job": job, "attempts": attempts,
+        "job": job, "attempts": attempts, "result_url": result_url,
     })
 
 

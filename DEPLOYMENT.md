@@ -2,28 +2,19 @@
 
 ## Quick Start (docker-compose)
 
-### 1. Configure `.env`
+### 1. Настройка секретов
+
+Dev-дефолты уже зашиты в `docker-compose.yml`. Для прода переопредели через переменные окружения или `.env` (не коммитится в git):
 
 ```bash
-cp .env .env  # уже есть шаблон, заполни значения
+# Сгенерируй секреты
+export AIMG_JWT_SECRET=$(openssl rand -base64 32)
+export AIMG_ENCRYPTION_KEY=$(openssl rand -base64 32)
+export AIMG_ADMIN_SESSION_SECRET=$(openssl rand -base64 32)
+
+# Replicate — нужен при первом запуске (миграция 004 шифрует и сохраняет в БД)
+export REPLICATE_API_TOKEN=r8_your_token_here
 ```
-
-Обязательные переменные:
-
-```bash
-AIMG_DATABASE_URL=postgresql://aimg:aimg@postgres:5432/aimg
-AIMG_REDIS_URL=redis://redis:6379/0
-AIMG_S3_ENDPOINT=http://minio:9000
-AIMG_S3_ACCESS_KEY=minioadmin
-AIMG_S3_SECRET_KEY=minioadmin
-AIMG_S3_BUCKET=aimg
-AIMG_JWT_SECRET=<сгенерируй: openssl rand -base64 32>
-AIMG_ENCRYPTION_KEY=<сгенерируй: openssl rand -base64 32>
-AIMG_ADMIN_SESSION_SECRET=<сгенерируй: openssl rand -base64 32>
-REPLICATE_API_TOKEN=r8_your_token_here
-```
-
-> `REPLICATE_API_TOKEN` нужен при первом запуске — миграция 004 шифрует его и сохраняет в БД. После этого переменная больше не нужна.
 
 ### 2. Запуск
 

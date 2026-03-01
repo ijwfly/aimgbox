@@ -1,0 +1,46 @@
+<div id="poll-container"
+     {% if status in ('pending', 'running') %}
+     hx-get="/admin/test-jobs/poll/{{ job_id }}?api_key={{ api_key }}&user_id={{ user_id }}"
+     hx-trigger="every 3s"
+     hx-swap="outerHTML"
+     {% endif %}>
+
+    <article>
+        <header>
+            <span class="badge badge-{{ status }}">{{ status }}</span>
+            &nbsp; Job <span class="mono">{{ job_id }}</span>
+        </header>
+
+        {% if status in ('pending', 'running') %}
+        <p aria-busy="true">Job is {{ status }}... waiting for result</p>
+
+        {% elif status == 'succeeded' and result_url %}
+        <p>Job completed successfully.</p>
+        <div style="margin:1rem 0;">
+            <img src="{{ result_url }}" alt="Result" style="max-width:100%;max-height:500px;border-radius:8px;">
+        </div>
+        <dl>
+            <dt>Download URL</dt>
+            <dd><a href="{{ result_url }}" target="_blank">{{ result_url[:80] }}...</a></dd>
+            {% if job_data %}
+            <dt>Job Type</dt><dd>{{ job_data.job_type }}</dd>
+            <dt>Credits</dt><dd>{{ job_data.credit_cost }}</dd>
+            <dt>Created</dt><dd>{{ job_data.created_at }}</dd>
+            <dt>Completed</dt><dd>{{ job_data.completed_at or '—' }}</dd>
+            {% endif %}
+        </dl>
+
+        {% elif status == 'succeeded' %}
+        <p>Job completed but no result URL available.</p>
+
+        {% elif status == 'failed' %}
+        <p>Job failed.</p>
+        {% if error %}
+        <pre style="background:#fdd;padding:1rem;border-radius:4px;">{{ error.code|default('') }}: {{ error.message|default('Unknown error') }}</pre>
+        {% endif %}
+
+        {% elif status == 'error' %}
+        <pre style="background:#fdd;padding:1rem;border-radius:4px;">{{ error }}</pre>
+        {% endif %}
+    </article>
+</div>
