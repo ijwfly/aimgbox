@@ -60,7 +60,7 @@ AIMG — REST API для обработки изображений с помощ
 `X-External-User-Id` — произвольная строка, идентифицирующая пользователя в вашей системе. AIMG автоматически создаёт внутреннюю запись пользователя при первом обращении с новым `X-External-User-Id`.
 
 ```bash
-curl -X GET https://api.example.com/v1/users/me/balance \
+curl -X GET https://api.aimgbox.nechaev.dev/v1/users/me/balance \
   -H "X-API-Key: eyJhbGciOiJIUzI1NiIs..." \
   -H "X-External-User-Id: user-42"
 ```
@@ -155,7 +155,7 @@ Retry-After: 30
 Для защиты от дублирования операций при сетевых сбоях поддерживается заголовок `Idempotency-Key`:
 
 ```bash
-curl -X POST https://api.example.com/v1/jobs \
+curl -X POST https://api.aimgbox.nechaev.dev/v1/jobs \
   -H "X-API-Key: eyJ..." \
   -H "X-External-User-Id: user-42" \
   -H "Idempotency-Key: order-12345-job-1" \
@@ -185,7 +185,7 @@ curl -X POST https://api.example.com/v1/jobs \
 curl -H "Accept-Language: ru" ...
 
 # Через query-параметр
-curl "https://api.example.com/v1/jobs?lang=ru" ...
+curl "https://api.aimgbox.nechaev.dev/v1/jobs?lang=ru" ...
 ```
 
 ---
@@ -201,7 +201,7 @@ GET /health
 ```
 
 ```bash
-curl https://api.example.com/health
+curl https://api.aimgbox.nechaev.dev/health
 ```
 
 **Ответ (200):**
@@ -231,7 +231,7 @@ GET /v1/meta/job-types
 ```
 
 ```bash
-curl https://api.example.com/v1/meta/job-types \
+curl https://api.aimgbox.nechaev.dev/v1/meta/job-types \
   -H "X-API-Key: eyJ..."
 ```
 
@@ -281,7 +281,7 @@ POST /v1/files
 ```
 
 ```bash
-curl -X POST https://api.example.com/v1/files \
+curl -X POST https://api.aimgbox.nechaev.dev/v1/files \
   -H "X-API-Key: eyJ..." \
   -H "X-External-User-Id: user-42" \
   -F "file=@photo.png"
@@ -319,7 +319,7 @@ GET /v1/files/{file_id}
 ```
 
 ```bash
-curl https://api.example.com/v1/files/a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+curl https://api.aimgbox.nechaev.dev/v1/files/a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
   -H "X-API-Key: eyJ..." \
   -H "X-External-User-Id: user-42"
 ```
@@ -332,7 +332,7 @@ curl https://api.example.com/v1/files/a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
   "success": true,
   "data": {
     "file_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "download_url": "https://storage.example.com/...?signature=...",
+    "download_url": "https://storage.aimgbox.nechaev.dev/...?signature=...",
     "content_type": "image/png",
     "original_filename": "photo.png",
     "size_bytes": 1024000,
@@ -352,7 +352,7 @@ POST /v1/jobs
 ```
 
 ```bash
-curl -X POST https://api.example.com/v1/jobs \
+curl -X POST https://api.aimgbox.nechaev.dev/v1/jobs \
   -H "X-API-Key: eyJ..." \
   -H "X-External-User-Id: user-42" \
   -H "Content-Type: application/json" \
@@ -407,7 +407,7 @@ GET /v1/jobs/{job_id}
 ```
 
 ```bash
-curl https://api.example.com/v1/jobs/f47ac10b-58cc-4372-a567-0e02b2c3d479 \
+curl https://api.aimgbox.nechaev.dev/v1/jobs/f47ac10b-58cc-4372-a567-0e02b2c3d479 \
   -H "X-API-Key: eyJ..." \
   -H "X-External-User-Id: user-42"
 ```
@@ -460,7 +460,7 @@ GET /v1/jobs/{job_id}/result
 ```
 
 ```bash
-curl https://api.example.com/v1/jobs/f47ac10b-58cc-4372-a567-0e02b2c3d479/result \
+curl https://api.aimgbox.nechaev.dev/v1/jobs/f47ac10b-58cc-4372-a567-0e02b2c3d479/result \
   -H "X-API-Key: eyJ..." \
   -H "X-External-User-Id: user-42"
 ```
@@ -474,7 +474,7 @@ curl https://api.example.com/v1/jobs/f47ac10b-58cc-4372-a567-0e02b2c3d479/result
   "data": {
     "job_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
     "file_id": "b2c3d479-f47a-c10b-58cc-437200000001",
-    "download_url": "https://storage.example.com/...?signature=...",
+    "download_url": "https://storage.aimgbox.nechaev.dev/...?signature=...",
     "content_type": "image/png",
     "size_bytes": 2048000,
     "expires_at": "2026-03-03T13:00:00"
@@ -495,7 +495,7 @@ GET /v1/users/me/balance
 ```
 
 ```bash
-curl https://api.example.com/v1/users/me/balance \
+curl https://api.aimgbox.nechaev.dev/v1/users/me/balance \
   -H "X-API-Key: eyJ..." \
   -H "X-External-User-Id: user-42"
 ```
@@ -530,7 +530,7 @@ POST /v1/billing/topup
 ```
 
 ```bash
-curl -X POST https://api.example.com/v1/billing/topup \
+curl -X POST https://api.aimgbox.nechaev.dev/v1/billing/topup \
   -H "X-API-Key: eyJ..." \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: payment-98765" \
@@ -581,7 +581,7 @@ POST /v1/billing/check
 ```
 
 ```bash
-curl -X POST https://api.example.com/v1/billing/check \
+curl -X POST https://api.aimgbox.nechaev.dev/v1/billing/check \
   -H "X-API-Key: eyJ..." \
   -H "X-External-User-Id: user-42" \
   -H "Content-Type: application/json" \
@@ -624,7 +624,7 @@ GET /v1/users/me/history
 | `job_type` | string | — | Фильтр по типу задачи (slug) |
 
 ```bash
-curl "https://api.example.com/v1/users/me/history?limit=10&status=succeeded" \
+curl "https://api.aimgbox.nechaev.dev/v1/users/me/history?limit=10&status=succeeded" \
   -H "X-API-Key: eyJ..." \
   -H "X-External-User-Id: user-42"
 ```
@@ -777,13 +777,13 @@ function verifyWebhook(payloadBuffer, signature, secret) {
 
 ```bash
 # 1. Проверить баланс
-curl -s https://api.example.com/v1/users/me/balance \
+curl -s https://api.aimgbox.nechaev.dev/v1/users/me/balance \
   -H "X-API-Key: $API_KEY" \
   -H "X-External-User-Id: user-42"
 # → total_credits: 150
 
 # 2. Проверить, хватает ли средств
-curl -s -X POST https://api.example.com/v1/billing/check \
+curl -s -X POST https://api.aimgbox.nechaev.dev/v1/billing/check \
   -H "X-API-Key: $API_KEY" \
   -H "X-External-User-Id: user-42" \
   -H "Content-Type: application/json" \
@@ -791,7 +791,7 @@ curl -s -X POST https://api.example.com/v1/billing/check \
 # → can_afford: true, credit_cost: 10
 
 # 3. Создать задачу (с ключом идемпотентности)
-curl -s -X POST https://api.example.com/v1/jobs \
+curl -s -X POST https://api.aimgbox.nechaev.dev/v1/jobs \
   -H "X-API-Key: $API_KEY" \
   -H "X-External-User-Id: user-42" \
   -H "Idempotency-Key: req-$(uuidgen)" \
@@ -810,7 +810,7 @@ curl -s -X POST https://api.example.com/v1/jobs \
 
 # 4. Поллинг статуса (каждые 2 секунды)
 while true; do
-  RESPONSE=$(curl -s https://api.example.com/v1/jobs/f47ac10b-... \
+  RESPONSE=$(curl -s https://api.aimgbox.nechaev.dev/v1/jobs/f47ac10b-... \
     -H "X-API-Key: $API_KEY" \
     -H "X-External-User-Id: user-42")
 
@@ -833,10 +833,10 @@ while true; do
 done
 
 # 5. Скачать результат
-curl -s https://api.example.com/v1/jobs/f47ac10b-.../result \
+curl -s https://api.aimgbox.nechaev.dev/v1/jobs/f47ac10b-.../result \
   -H "X-API-Key: $API_KEY" \
   -H "X-External-User-Id: user-42"
-# → download_url: "https://storage.example.com/...?signature=..."
+# → download_url: "https://storage.aimgbox.nechaev.dev/...?signature=..."
 
 # 6. Скачать файл по ссылке
 curl -o result.png "$(echo $RESULT | jq -r '.data.download_url')"
@@ -850,7 +850,7 @@ curl -o result.png "$(echo $RESULT | jq -r '.data.download_url')"
 
 ```bash
 # 1. Загрузить изображение
-UPLOAD=$(curl -s -X POST https://api.example.com/v1/files \
+UPLOAD=$(curl -s -X POST https://api.aimgbox.nechaev.dev/v1/files \
   -H "X-API-Key: $API_KEY" \
   -H "X-External-User-Id: user-42" \
   -F "file=@portrait.jpg")
@@ -859,7 +859,7 @@ FILE_ID=$(echo $UPLOAD | jq -r '.data.file_id')
 echo "Файл загружен: $FILE_ID"
 
 # 2. Создать задачу на удаление фона
-JOB=$(curl -s -X POST https://api.example.com/v1/jobs \
+JOB=$(curl -s -X POST https://api.aimgbox.nechaev.dev/v1/jobs \
   -H "X-API-Key: $API_KEY" \
   -H "X-External-User-Id: user-42" \
   -H "Content-Type: application/json" \
@@ -876,7 +876,7 @@ echo "Задача создана: $JOB_ID"
 
 # 3. Ожидание результата (поллинг)
 while true; do
-  STATUS=$(curl -s https://api.example.com/v1/jobs/$JOB_ID \
+  STATUS=$(curl -s https://api.aimgbox.nechaev.dev/v1/jobs/$JOB_ID \
     -H "X-API-Key: $API_KEY" \
     -H "X-External-User-Id: user-42" | jq -r '.data.status')
 
@@ -890,7 +890,7 @@ while true; do
 done
 
 # 4. Скачать результат
-RESULT=$(curl -s https://api.example.com/v1/jobs/$JOB_ID/result \
+RESULT=$(curl -s https://api.aimgbox.nechaev.dev/v1/jobs/$JOB_ID/result \
   -H "X-API-Key: $API_KEY" \
   -H "X-External-User-Id: user-42")
 
@@ -908,7 +908,7 @@ echo "Результат сохранён: portrait_no_bg.png"
 # Пополнить баланс после подтверждения оплаты
 # ВАЖНО: используйте Idempotency-Key и external_transaction_id
 # для защиты от двойного начисления
-curl -s -X POST https://api.example.com/v1/billing/topup \
+curl -s -X POST https://api.aimgbox.nechaev.dev/v1/billing/topup \
   -H "X-API-Key: $API_KEY" \
   -H "Idempotency-Key: stripe-pi-3N2abc123" \
   -H "Content-Type: application/json" \
@@ -941,7 +941,7 @@ from fastapi import FastAPI, Request, Response
 app = FastAPI()
 WEBHOOK_SECRET = "your-webhook-secret"
 API_KEY = "eyJ..."
-API_BASE = "https://api.example.com"
+API_BASE = "https://api.aimgbox.nechaev.dev"
 
 @app.post("/webhooks/aimg")
 async def handle_aimg_webhook(request: Request):
